@@ -1,0 +1,1 @@
+Sage Intacct Extractor long description

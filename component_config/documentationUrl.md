@@ -1,0 +1,1 @@
+https://github.com/keboola/component-sage-intacct-extractor/blob/master/README.md
