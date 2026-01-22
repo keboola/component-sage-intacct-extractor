@@ -1,99 +1,155 @@
-"""
-Template Component main class.
-
-"""
-
-import csv
+import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
-from keboola.component.base import ComponentBase
+from keboola.component.base import ComponentBase, sync_action
 from keboola.component.exceptions import UserException
+from keboola.component.sync_actions import SelectElement
 
+from client import SageIntacctClient
 from configuration import Configuration
+from writer import SageIntacctWriter
+
+STATE_AUTH_ID = "auth_id"
+STATE_REFRESH_TOKEN = "#refresh_token"
+STATE_LAST_RUN = "last_run"
 
 
 class Component(ComponentBase):
-    """
-    Extends base class for general Python components. Initializes the CommonInterface
-    and performs configuration validation.
-
-    For easier debugging the data folder is picked up by default from `../data` path,
-    relative to working directory.
-
-    If `debug` parameter is present in the `config.json`, the default logger is set to verbose DEBUG mode.
-    """
-
     def __init__(self):
         super().__init__()
+        self.cfg = self._init_configuration()
+        self.client = self._init_client()
 
     def run(self):
-        """
-        Main execution code
-        """
+        logging.info(f'Downloading data for endpoint "{self.cfg.endpoint}".')
 
-        # ####### EXAMPLE TO REMOVE
-        # check for missing configuration parameters
-        params = Configuration(**self.configuration.parameters)
+        state = self.get_state_file()
 
-        # Access parameters in configuration
-        if params.print_hello:
-            logging.info("Hello World")
+        incremental_field = None
+        incremental_value = None
 
-        # get input table definitions
-        input_tables = self.get_input_tables_definitions()
-        for table in input_tables:
-            logging.info(f"Received input table: {table.name} with path: {table.full_path}")
+        if self.cfg.destination.incremental:
+            incremental_field = self.cfg.destination.incremental_field or "WHENMODIFIED"
+            incremental_value = state.get(STATE_LAST_RUN) or self.cfg.initial_since or None
 
-        if len(input_tables) == 0:
-            raise UserException("No input tables found")
+            if incremental_field and incremental_value:
+                logging.info(f"Using incremental filtering: {incremental_field} >= {incremental_value}")
 
-        # get last state data/in/state.json from previous run
-        previous_state = self.get_state_file()
-        logging.info(previous_state.get("some_parameter"))
+        table_name = self.cfg.destination.table_name or f"{self.cfg.endpoint}.csv"
 
-        # Create output table (Table definition - just metadata)
-        table = self.create_out_table_definition("output.csv", incremental=True, primary_key=["timestamp"])
+        primary_key = self.cfg.destination.primary_key
+        if not primary_key:
+            logging.info("Primary key not specified in configuration")
+            primary_key = []
 
-        # get file path of the table (data/out/tables/Features.csv)
-        out_table_path = table.full_path
-        logging.info(out_table_path)
+        res_table = self.create_out_table_definition(
+            table_name,
+            primary_key=primary_key,
+            incremental=self.cfg.destination.incremental,
+        )
 
-        # Add timestamp column and save into out_table_path
-        input_table = input_tables[0]
-        with (
-            open(input_table.full_path, "r") as inp_file,
-            open(table.full_path, mode="wt", encoding="utf-8", newline="") as out_file,
+        writer = SageIntacctWriter(res_table.full_path)
+
+        total_rows = 0
+        for batch in self.client.extract_data(
+            self.cfg.endpoint, self.cfg.columns, incremental_field, incremental_value
         ):
-            reader = csv.DictReader(inp_file)
+            total_rows += len(batch)
+            writer.writerows(batch)
 
-            columns = list(reader.fieldnames)
-            # append timestamp
-            columns.append("timestamp")
+            if total_rows % 1000 == 0:
+                logging.info(f"Downloaded {total_rows} rows so far.")
 
-            # write result with column added
-            writer = csv.DictWriter(out_file, fieldnames=columns)
-            writer.writeheader()
-            for in_row in reader:
-                in_row["timestamp"] = datetime.now().isoformat()
-                writer.writerow(in_row)
+        logging.info(f"Extraction complete. Total rows downloaded: {total_rows}")
 
-        # Save table manifest (output.csv.manifest) from the Table definition
-        self.write_manifest(table)
+        if total_rows > 0:
+            writer.close()
+            for column_name in writer.get_result_columns():
+                res_table.add_column(column_name)
+            self.write_manifest(res_table)
 
-        # Write new state - will be available next run
-        self.write_state_file({"some_state_parameter": "value"})
+        credentials = self.configuration.oauth_credentials
+        self.write_state_file(
+            {
+                STATE_REFRESH_TOKEN: self.client.refresh_token,
+                STATE_AUTH_ID: credentials["id"],
+                STATE_LAST_RUN: datetime.now(timezone.utc).isoformat(),
+            }
+        )
 
-        # ####### EXAMPLE TO REMOVE END
+    def _init_client(self) -> SageIntacctClient:
+        credentials = self.configuration.oauth_credentials
+
+        if not credentials:
+            raise UserException("The configuration is not authorized. Please authorize it first.")
+
+        app_key = credentials.appKey
+        app_secret = credentials.appSecret
+
+        try:
+            oauth_data = json.loads(credentials.data) if isinstance(credentials.data, str) else credentials.data
+        except (json.JSONDecodeError, TypeError) as e:
+            raise UserException(f"Failed to parse OAuth credentials: {str(e)}")
+
+        company_id = oauth_data.get("company_id", "")
+        if not company_id:
+            raise UserException("Company ID not found in OAuth credentials")
+
+        state = self.get_state_file()
+        refresh_token = state.get(STATE_REFRESH_TOKEN)
+        auth_id = state.get(STATE_AUTH_ID)
+
+        if refresh_token and auth_id == credentials["id"]:
+            logging.info("Using refresh token from state file")
+            access_token = None
+        else:
+            refresh_token = oauth_data.get("refresh_token")
+            access_token = oauth_data.get("access_token")
+            logging.info("Using refresh token from OAuth credentials")
+
+        if not refresh_token:
+            raise UserException("Refresh token not found in credentials or state file")
+
+        client = SageIntacctClient(app_key, app_secret, company_id, refresh_token, access_token)
+
+        self.write_state_file(
+            {
+                STATE_REFRESH_TOKEN: client.refresh_token,
+                STATE_AUTH_ID: credentials["id"],
+            }
+        )
+
+        return client
+
+    def _init_configuration(self) -> Configuration:
+        if not self.configuration.parameters:
+            raise UserException("Configuration parameters are missing. Please add a configuration row.")
+
+        return Configuration(**self.configuration.parameters)
+
+    @sync_action("list_endpoints")
+    def list_endpoints(self):
+        return [SelectElement(value=obj) for obj in self.client.list_objects()]
+
+    @sync_action("list_columns")
+    def list_columns(self):
+        fields = self.client.get_object_fields(self.cfg.endpoint)
+        return [SelectElement(value=field) for field in fields]
+
+    @sync_action("list_primary_keys")
+    def list_primary_keys(self):
+        fields = self.client.get_object_fields(self.cfg.endpoint)
+        return [SelectElement(value=field) for field in fields]
+
+    @sync_action("testConnection")
+    def test_connection(self):
+        self.client.list_objects()
 
 
-"""
-        Main entrypoint
-"""
 if __name__ == "__main__":
     try:
         comp = Component()
-        # this triggers the run method by default and is controlled by the configuration.action parameter
         comp.execute_action()
     except UserException as exc:
         logging.exception(exc)

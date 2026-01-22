@@ -1,1 +1,69 @@
-{}
+{
+  "type": "object",
+  "title": "Endpoint Configuration",
+  "required": ["endpoint", "destination"],
+  "properties": {
+    "endpoint": {
+      "type": "string",
+      "title": "Object/Endpoint",
+      "description": "Sage Intacct object path to extract (e.g., accounts-receivable/customer, general-ledger/account)",
+      "propertyOrder": 1
+    },
+    "columns": {
+      "type": "array",
+      "title": "Fields",
+      "description": "Specific fields to extract. Leave empty to extract all fields.",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "propertyOrder": 2
+    },
+    "initial_since": {
+      "type": "string",
+      "title": "Initial Incremental Value",
+      "description": "ISO datetime for first incremental run (e.g., 2024-01-01T00:00:00Z). Only used on first run when no state exists.",
+      "format": "date-time",
+      "propertyOrder": 3
+    },
+    "destination": {
+      "type": "object",
+      "title": "Destination Settings",
+      "required": [],
+      "properties": {
+        "table_name": {
+          "type": "string",
+          "title": "Table Name",
+          "description": "Output table name (defaults to endpoint name if not specified)",
+          "propertyOrder": 1
+        },
+        "load_type": {
+          "type": "string",
+          "title": "Load Type",
+          "description": "Choose between full load (all data each run) or incremental load (only new/updated data)",
+          "enum": ["full_load", "incremental_load"],
+          "default": "incremental_load",
+          "propertyOrder": 2
+        },
+        "incremental_field": {
+          "type": "string",
+          "title": "Incremental Field",
+          "description": "Field for incremental filtering (defaults to WHENMODIFIED). Only used when Load Type is incremental_load.",
+          "default": "WHENMODIFIED",
+          "propertyOrder": 3
+        },
+        "primary_key": {
+          "type": "array",
+          "title": "Primary Key",
+          "description": "Primary key columns for the output table. Specify the field names that uniquely identify each record.",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "propertyOrder": 4
+        }
+      },
+      "propertyOrder": 4
+    }
+  }
+}

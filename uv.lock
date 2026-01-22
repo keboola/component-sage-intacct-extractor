@@ -3,35 +3,6 @@ revision = 1
 requires-python = ">=3.13"
 
 [[package]]
-name = "sage-intacct-extractor"
-source = { virtual = "." }
-dependencies = [
-    { name = "flake8" },
-    { name = "freezegun" },
-    { name = "keboola-component" },
-    { name = "keboola-http-client" },
-    { name = "keboola-utils" },
-    { name = "mock" },
-    { name = "pydantic" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "flake8", specifier = ">=7.2.0" },
-    { name = "freezegun", specifier = ">=1.5.1" },
-    { name = "keboola-component", specifier = ">=1.6.10" },
-    { name = "keboola-http-client", specifier = ">=1.0.1" },
-    { name = "keboola-utils", specifier = ">=1.1.0" },
-    { name = "mock", specifier = ">=5.2.0" },
-    { name = "pydantic", specifier = ">=2.11.3" },
-    { name = "ruff", specifier = ">=0.11.5" },
-]
-
-[package.metadata.requires-dev]
-dev = []
-
-[[package]]
 name = "annotated-types"
 version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -342,6 +313,34 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/fc/52/047f35d3b20fd1ae9ccfe28791ef0f3ca0ef0b3e6c1a58badd97d450131b/ruff-0.11.5-py3-none-win32.whl", hash = "sha256:e268da7b40f56e3eca571508a7e567e794f9bfcc0f412c4b607931d3af9c4afe", size = 10320697 },
     { url = "https://files.pythonhosted.org/packages/b9/fe/00c78010e3332a6e92762424cf4c1919065707e962232797d0b57fd8267e/ruff-0.11.5-py3-none-win_amd64.whl", hash = "sha256:6c6dc38af3cfe2863213ea25b6dc616d679205732dc0fb673356c2d69608f800", size = 11378665 },
     { url = "https://files.pythonhosted.org/packages/43/7c/c83fe5cbb70ff017612ff36654edfebec4b1ef79b558b8e5fd933bab836b/ruff-0.11.5-py3-none-win_arm64.whl", hash = "sha256:67e241b4314f4eacf14a601d586026a962f4002a475aa702c69980a38087aa4e", size = 10460287 },
+]
+
+[[package]]
+name = "sage-intacct-extractor"
+source = { virtual = "." }
+dependencies = [
+    { name = "flake8" },
+    { name = "freezegun" },
+    { name = "keboola-component" },
+    { name = "keboola-http-client" },
+    { name = "keboola-utils" },
+    { name = "mock" },
+    { name = "pydantic" },
+    { name = "requests" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "flake8", specifier = ">=7.2.0" },
+    { name = "freezegun", specifier = ">=1.5.1" },
+    { name = "keboola-component", specifier = ">=1.6.10" },
+    { name = "keboola-http-client", specifier = ">=1.0.1" },
+    { name = "keboola-utils", specifier = ">=1.1.0" },
+    { name = "mock", specifier = ">=5.2.0" },
+    { name = "pydantic", specifier = ">=2.11.3" },
+    { name = "requests", specifier = ">=2.31.0" },
+    { name = "ruff", specifier = ">=0.11.5" },
 ]
 
 [[package]]
