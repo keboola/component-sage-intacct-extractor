@@ -140,8 +140,8 @@ class Component(ComponentBase):
             raise UserException(f"Failed to decode JWT token: {str(e)}")
 
     def _save_refresh_token(self, new_refresh_token: str):
-        """Callback to immediately save the new refresh token via API."""
-        # Always store to self variable - will be saved to statefile at end of run
+        """Save the refresh token immediately via Storage API and to instance variable for statefile."""
+        # Store to self variable - will be saved to statefile at end of run
         self.refresh_token = new_refresh_token
 
         credentials = self.configuration.oauth_credentials
@@ -199,18 +199,11 @@ class Component(ComponentBase):
         company_id = token_payload.get("cnyId", "")
 
         client = SageIntacctClient(
-            app_key, app_secret, company_id, refresh_token, access_token, on_token_refresh=self._save_refresh_token
+            app_key, app_secret, company_id, refresh_token, access_token
         )
 
-        # Store refresh token to self - will be saved to statefile at end of run
-        self.refresh_token = client.refresh_token
-
-        self.write_state_file(
-            {
-                STATE_REFRESH_TOKEN: self.refresh_token,
-                STATE_AUTH_ID: credentials["id"],
-            }
-        )
+        if self.environment_variables.stack_id:
+            self._save_refresh_token(client.refresh_token)
 
         return client
 

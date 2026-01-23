@@ -156,7 +156,6 @@ class SageIntacctClient:
 
         query_payload = {
             "object": object_path,
-            "fields": [],
             "start": 1,
             "size": 1,
         }
@@ -191,10 +190,12 @@ class SageIntacctClient:
 
         query_payload = {
             "object": object_path,
-            "fields": fields or [],
             "start": 1,
             "size": 1000,
         }
+
+        if fields:
+            query_payload["fields"] = fields
 
         if incremental_field and incremental_value:
             logging.info(f"Using incremental filtering: {incremental_field} >= {incremental_value}")
