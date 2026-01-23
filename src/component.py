@@ -19,7 +19,7 @@ STATE_LAST_RUN = "last_run"
 class Component(ComponentBase):
     def __init__(self):
         super().__init__()
-        self.cfg = self._init_configuration()
+        self.cfg = Configuration(**self.configuration.parameters)
         self.client = self._init_client()
 
     def run(self):
@@ -54,7 +54,7 @@ class Component(ComponentBase):
 
         total_rows = 0
         for batch in self.client.extract_data(
-            self.cfg.endpoint, self.cfg.columns, incremental_field, incremental_value
+                self.cfg.endpoint, self.cfg.columns, incremental_field, incremental_value
         ):
             total_rows += len(batch)
             writer.writerows(batch)
@@ -141,12 +141,6 @@ class Component(ComponentBase):
         )
 
         return client
-
-    def _init_configuration(self) -> Configuration:
-        if not self.configuration.parameters:
-            raise UserException("Configuration parameters are missing. Please add a configuration row.")
-
-        return Configuration(**self.configuration.parameters)
 
     @sync_action("list_endpoints")
     def list_endpoints(self):

@@ -22,10 +22,10 @@ class Destination(BaseModel):
 
 
 class Configuration(BaseModel):
-    endpoint: str
+    endpoint: str = ""
     columns: list[str] = Field(default_factory=list)
     initial_since: str = ""
-    destination: Destination
+    destination: Destination = Field(default_factory=Destination)
     debug: bool = False
 
     def __init__(self, **data):
