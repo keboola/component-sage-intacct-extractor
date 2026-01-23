@@ -1,3 +1,4 @@
+import base64
 import json
 import logging
 from datetime import datetime, timezone
@@ -78,6 +79,26 @@ class Component(ComponentBase):
             }
         )
 
+    def _decode_jwt_payload(self, token: str) -> dict:
+        """Decode JWT token payload to extract claims."""
+        try:
+            # JWT has 3 parts: header.payload.signature
+            parts = token.split(".")
+            if len(parts) != 3:
+                raise ValueError("Invalid JWT token format")
+
+            # Decode the payload (second part)
+            payload = parts[1]
+            # Add padding if needed for base64 decoding
+            padding = 4 - len(payload) % 4
+            if padding != 4:
+                payload += "=" * padding
+
+            decoded_bytes = base64.urlsafe_b64decode(payload)
+            return json.loads(decoded_bytes)
+        except (ValueError, json.JSONDecodeError) as e:
+            raise UserException(f"Failed to decode JWT token: {str(e)}")
+
     def _init_client(self) -> SageIntacctClient:
         credentials = self.configuration.oauth_credentials
 
@@ -91,10 +112,6 @@ class Component(ComponentBase):
             oauth_data = json.loads(credentials.data) if isinstance(credentials.data, str) else credentials.data
         except (json.JSONDecodeError, TypeError) as e:
             raise UserException(f"Failed to parse OAuth credentials: {str(e)}")
-
-        company_id = oauth_data.get("company_id", "")
-        if not company_id:
-            raise UserException("Company ID not found in OAuth credentials")
 
         state = self.get_state_file()
         refresh_token = state.get(STATE_REFRESH_TOKEN)
@@ -110,6 +127,9 @@ class Component(ComponentBase):
 
         if not refresh_token:
             raise UserException("Refresh token not found in credentials or state file")
+
+        token_payload = self._decode_jwt_payload(access_token)
+        company_id = token_payload.get("cnyId", "")
 
         client = SageIntacctClient(app_key, app_secret, company_id, refresh_token, access_token)
 
