@@ -3,12 +3,10 @@
   "title": "Sage Intacct Extractor Configuration",
   "required": [],
   "properties": {
-    "debug": {
-      "type": "boolean",
-      "title": "Debug Mode",
-      "description": "Enable debug logging for troubleshooting",
-      "default": false,
-      "propertyOrder": 100
+    "test_connection": {
+      "type": "button",
+      "format": "test-connection",
+      "propertyOrder": 500
     }
   }
 }

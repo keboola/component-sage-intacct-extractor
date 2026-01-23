@@ -6,16 +6,36 @@
     "endpoint": {
       "type": "string",
       "title": "Object/Endpoint",
+      "format": "select",
+      "enum": [],
+      "options": {
+        "async": {
+          "label": "Re-load endpoints",
+          "action": "list_endpoints"
+        }
+      },
       "description": "Sage Intacct object path to extract (e.g., accounts-receivable/customer, general-ledger/account)",
       "propertyOrder": 1
     },
     "columns": {
       "type": "array",
       "title": "Fields",
-      "description": "Specific fields to extract. Leave empty to extract all fields.",
+      "format": "select",
       "items": {
-        "type": "string"
+        "type": "string",
+        "enum": []
       },
+      "options": {
+        "async": {
+          "label": "Re-load columns",
+          "action": "list_columns"
+        },
+        "inputAttributes": {
+          "placeholder": "Download all columns"
+        }
+      },
+      "description": "Specific fields to extract. Leave empty to extract all fields.",
+      "uniqueItems": true,
       "default": [],
       "propertyOrder": 2
     },
@@ -48,6 +68,14 @@
         "incremental_field": {
           "type": "string",
           "title": "Incremental Field",
+          "format": "select",
+          "enum": [],
+          "options": {
+            "async": {
+              "label": "Re-load columns",
+              "action": "list_columns"
+            }
+          },
           "description": "Field for incremental filtering (defaults to WHENMODIFIED). Only used when Load Type is incremental_load.",
           "default": "WHENMODIFIED",
           "propertyOrder": 3
@@ -55,15 +83,34 @@
         "primary_key": {
           "type": "array",
           "title": "Primary Key",
-          "description": "Primary key columns for the output table. Specify the field names that uniquely identify each record.",
+          "format": "select",
           "items": {
-            "type": "string"
+            "type": "string",
+            "enum": []
           },
+          "options": {
+            "async": {
+              "label": "Re-load primary keys",
+              "action": "list_primary_keys"
+            },
+            "inputAttributes": {
+              "placeholder": "Select primary key fields"
+            }
+          },
+          "description": "Primary key columns for the output table. Specify the field names that uniquely identify each record.",
+          "uniqueItems": true,
           "default": [],
           "propertyOrder": 4
         }
       },
       "propertyOrder": 4
+    },
+    "debug": {
+      "type": "boolean",
+      "title": "Debug Mode",
+      "description": "Enable debug logging for troubleshooting",
+      "default": false,
+      "propertyOrder": 5
     }
   }
 }
