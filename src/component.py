@@ -180,11 +180,6 @@ class Component(ComponentBase):
         app_key = credentials.appKey
         app_secret = credentials.appSecret
 
-        try:
-            oauth_data = json.loads(credentials.data) if isinstance(credentials.data, str) else credentials.data
-        except (json.JSONDecodeError, TypeError) as e:
-            raise UserException(f"Failed to parse OAuth credentials: {str(e)}")
-
         state = self.get_state_file()
         refresh_token = state.get(STATE_REFRESH_TOKEN)
         auth_id = state.get(STATE_AUTH_ID)
@@ -193,14 +188,14 @@ class Component(ComponentBase):
             logging.info("Using refresh token from state file")
             access_token = None
         else:
-            refresh_token = oauth_data.get("refresh_token")
-            access_token = oauth_data.get("access_token")
+            refresh_token = credentials.data.get("refresh_token")
+            access_token = credentials.data.get("access_token")
             logging.info("Using refresh token from OAuth credentials")
 
         if not refresh_token:
             raise UserException("Refresh token not found in credentials or state file")
 
-        token_payload = self._decode_jwt_payload(access_token)
+        token_payload = self._decode_jwt_payload(refresh_token)
         company_id = token_payload.get("cnyId", "")
 
         client = SageIntacctClient(
