@@ -1,6 +1,6 @@
 import logging
 import time
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 
 import requests
 from keboola.component.exceptions import UserException
@@ -14,6 +14,7 @@ class SageIntacctClient:
         company_id: str,
         refresh_token: str,
         access_token: str | None = None,
+        on_token_refresh: Callable[[str], None] | None = None,
     ):
         self.app_key = app_key
         self.app_secret = app_secret
@@ -22,6 +23,7 @@ class SageIntacctClient:
         self._access_token = access_token
         self._session = requests.Session()
         self._base_url = "https://api.intacct.com/ia/api/v1"
+        self._on_token_refresh = on_token_refresh
 
         if not self._access_token:
             self._authenticate()
@@ -45,6 +47,10 @@ class SageIntacctClient:
             self._access_token = token_data.get("access_token")
             if "refresh_token" in token_data:
                 self._refresh_token = token_data["refresh_token"]
+                logging.info("Refresh token was rotated, updating stored token")
+                # Notify component to save the new refresh token immediately
+                if self._on_token_refresh:
+                    self._on_token_refresh(self._refresh_token)
 
             logging.info("Successfully authenticated with Sage Intacct")
 

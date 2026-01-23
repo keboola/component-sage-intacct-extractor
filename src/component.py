@@ -1,8 +1,11 @@
 import base64
 import json
 import logging
+import os
 from datetime import datetime, timezone
 
+import backoff
+import requests
 from keboola.component.base import ComponentBase, sync_action
 from keboola.component.exceptions import UserException
 from keboola.component.sync_actions import SelectElement
@@ -10,6 +13,8 @@ from keboola.component.sync_actions import SelectElement
 from client import SageIntacctClient
 from configuration import Configuration
 from writer import SageIntacctWriter
+
+URL_SUFFIX = os.environ.get("KBC_STACKID", "connection.keboola.com").replace("connection.", "")
 
 STATE_AUTH_ID = "auth_id"
 STATE_REFRESH_TOKEN = "#refresh_token"
@@ -20,6 +25,7 @@ class Component(ComponentBase):
     def __init__(self):
         super().__init__()
         self.cfg = Configuration(**self.configuration.parameters)
+        self.refresh_token = None
         self.client = self._init_client()
 
     def run(self):
@@ -54,7 +60,7 @@ class Component(ComponentBase):
 
         total_rows = 0
         for batch in self.client.extract_data(
-                self.cfg.endpoint, self.cfg.columns, incremental_field, incremental_value
+            self.cfg.endpoint, self.cfg.columns, incremental_field, incremental_value
         ):
             total_rows += len(batch)
             writer.writerows(batch)
@@ -73,11 +79,45 @@ class Component(ComponentBase):
         credentials = self.configuration.oauth_credentials
         self.write_state_file(
             {
-                STATE_REFRESH_TOKEN: self.client.refresh_token,
+                STATE_REFRESH_TOKEN: self.refresh_token,
                 STATE_AUTH_ID: credentials["id"],
                 STATE_LAST_RUN: datetime.now(timezone.utc).isoformat(),
             }
         )
+
+    @backoff.on_exception(backoff.expo, requests.exceptions.RequestException, max_tries=5)
+    def encrypt(self, token: str) -> str:
+        """Encrypt a token using Keboola encryption API."""
+        url = f"https://encryption.{URL_SUFFIX}.com/encrypt"
+        params = {
+            "componentId": self.environment_variables.component_id,
+            "projectId": self.environment_variables.project_id,
+            "configId": self.environment_variables.config_id,
+        }
+        headers = {"Content-Type": "text/plain"}
+
+        response = requests.post(url, data=token, params=params, headers=headers)
+        response.raise_for_status()
+        return response.text
+
+    @backoff.on_exception(backoff.expo, requests.exceptions.RequestException, max_tries=5)
+    def update_config_state(self, component_id: str, config_id: str, state: dict, branch_id: str = "default"):
+        """Update configuration state via Storage API."""
+        if not branch_id:
+            branch_id = "default"
+
+        url = (
+            f"https://connection.{URL_SUFFIX}/v2/storage/branch/{branch_id}"
+            f"/components/{component_id}/configs/{config_id}/state"
+        )
+
+        parameters = {"state": json.dumps(state)}
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-StorageApi-Token": self.environment_variables.token,
+        }
+        response = requests.put(url, data=parameters, headers=headers)
+        response.raise_for_status()
 
     def _decode_jwt_payload(self, token: str) -> dict:
         """Decode JWT token payload to extract claims."""
@@ -98,6 +138,38 @@ class Component(ComponentBase):
             return json.loads(decoded_bytes)
         except (ValueError, json.JSONDecodeError) as e:
             raise UserException(f"Failed to decode JWT token: {str(e)}")
+
+    def _save_refresh_token(self, new_refresh_token: str):
+        """Callback to immediately save the new refresh token via API."""
+        # Always store to self variable - will be saved to statefile at end of run
+        self.refresh_token = new_refresh_token
+
+        credentials = self.configuration.oauth_credentials
+        logging.debug("Saving new refresh token via Storage API")
+
+        try:
+            encrypted_token = self.encrypt(new_refresh_token)
+        except requests.exceptions.RequestException:
+            logging.warning("Encrypt API is unavailable. Token will be saved to statefile at end of run.")
+            return
+
+        new_state = {
+            "component": {
+                STATE_REFRESH_TOKEN: encrypted_token,
+                STATE_AUTH_ID: credentials["id"],
+            }
+        }
+
+        try:
+            self.update_config_state(
+                component_id=self.environment_variables.component_id,
+                config_id=self.environment_variables.config_id,
+                state=new_state,
+                branch_id=self.environment_variables.branch_id,
+            )
+            logging.info("Refresh token saved via Storage API")
+        except requests.exceptions.RequestException:
+            logging.warning("Storage API unavailable. Token will be saved to statefile at end of run.")
 
     def _init_client(self) -> SageIntacctClient:
         credentials = self.configuration.oauth_credentials
@@ -131,11 +203,16 @@ class Component(ComponentBase):
         token_payload = self._decode_jwt_payload(access_token)
         company_id = token_payload.get("cnyId", "")
 
-        client = SageIntacctClient(app_key, app_secret, company_id, refresh_token, access_token)
+        client = SageIntacctClient(
+            app_key, app_secret, company_id, refresh_token, access_token, on_token_refresh=self._save_refresh_token
+        )
+
+        # Store refresh token to self - will be saved to statefile at end of run
+        self.refresh_token = client.refresh_token
 
         self.write_state_file(
             {
-                STATE_REFRESH_TOKEN: client.refresh_token,
+                STATE_REFRESH_TOKEN: self.refresh_token,
                 STATE_AUTH_ID: credentials["id"],
             }
         )
