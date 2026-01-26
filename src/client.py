@@ -104,14 +104,20 @@ class SageIntacctClient:
         logging.info(f"Found {len(objects)} objects from model API")
         return objects
 
-    def get_object_fields(self, object_path: str) -> list[str]:
+    def get_object_fields(self, object_path: str) -> dict[str, str]:
+        """Get object fields with their types. Returns dict {field_name: type}."""
         logging.info(f"Fetching field definitions for object: {object_path}")
 
         params = {"name": object_path, "schema": "true"}
         response = self._make_request("GET", "/services/core/model", params=params)
         data = response.json()
 
-        fields = list(data.get('ia::result', {}).get('fields', {}).keys())
+        result = data.get("ia::result", {})
+        fields = {}
+
+        for field_name, field_info in result.get("fields", {}).items():
+            if not field_name.startswith("ia::"):
+                fields[field_name] = field_info.get("type", "string")
 
         return fields
 

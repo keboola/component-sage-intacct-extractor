@@ -7,12 +7,27 @@ from datetime import datetime, timezone
 import backoff
 import requests
 from keboola.component.base import ComponentBase, sync_action
+from keboola.component.dao import ColumnDefinition, BaseType
 from keboola.component.exceptions import UserException
 from keboola.component.sync_actions import SelectElement
 
 from client import SageIntacctClient
 from configuration import Configuration
 from writer import SageIntacctWriter
+
+
+def convert_to_keboola_type(sage_type: str) -> str:
+    """Convert Sage Intacct type to Keboola base type."""
+    type_mapping = {
+        "string": "STRING",
+        "boolean": "BOOLEAN",
+        "integer": "INTEGER",
+        "number": "NUMERIC",
+        "date": "DATE",
+        "datetime": "TIMESTAMP",
+    }
+    return type_mapping.get(sage_type.lower(), "STRING")
+
 
 URL_SUFFIX = os.environ.get("KBC_STACKID", "connection.keboola.com").replace("connection.", "")
 
@@ -32,6 +47,24 @@ class Component(ComponentBase):
         logging.info(f'Downloading data for endpoint "{self.cfg.endpoint}".')
         self._save_refresh_token()
 
+        # Get field metadata (names and types)
+        all_fields_metadata = self.client.get_object_fields(self.cfg.endpoint)
+
+        # Determine which fields to extract
+        if self.cfg.columns:
+            # User specified columns - filter metadata
+            fields_to_extract = {
+                name: all_fields_metadata.get(name, "string")
+                for name in self.cfg.columns
+                if name in all_fields_metadata
+            }
+        else:
+            # Use all available fields
+            fields_to_extract = all_fields_metadata
+
+        if not fields_to_extract:
+            raise UserException(f"No valid fields found for object: {self.cfg.endpoint}")
+
         incremental_field = None
         incremental_value = None
 
@@ -49,8 +82,19 @@ class Component(ComponentBase):
             logging.info("Primary key not specified in configuration")
             primary_key = []
 
+        # Build schema with ColumnDefinition objects
+        schema = {
+            col_name: ColumnDefinition(
+                data_types=BaseType(dtype=convert_to_keboola_type(sage_type)),
+                primary_key=col_name in primary_key,
+            )
+            for col_name, sage_type in fields_to_extract.items()
+        }
+
+        # Create table definition with schema
         res_table = self.create_out_table_definition(
             table_name,
+            schema=schema,
             primary_key=primary_key,
             incremental=self.cfg.destination.incremental,
         )
@@ -59,7 +103,7 @@ class Component(ComponentBase):
 
         total_rows = 0
         for batch in self.client.extract_data(
-            self.cfg.endpoint, self.cfg.columns, incremental_field, incremental_value
+            self.cfg.endpoint, list(fields_to_extract.keys()), incremental_field, incremental_value
         ):
             total_rows += len(batch)
             writer.writerows(batch)
@@ -71,8 +115,6 @@ class Component(ComponentBase):
 
         if total_rows > 0:
             writer.close()
-            for column_name in writer.get_result_columns():
-                res_table.add_column(column_name)
             self.write_manifest(res_table)
 
         self._save_refresh_token()
@@ -191,9 +233,7 @@ class Component(ComponentBase):
         company_id = token_payload.get("cnyId", "")
 
         # Create client (may refresh token during initialization)
-        client = SageIntacctClient(
-            app_key, app_secret, company_id, refresh_token, access_token
-        )
+        client = SageIntacctClient(app_key, app_secret, company_id, refresh_token, access_token)
 
         return client
 
@@ -204,12 +244,12 @@ class Component(ComponentBase):
     @sync_action("list_columns")
     def list_columns(self):
         fields = self.client.get_object_fields(self.cfg.endpoint)
-        return [SelectElement(value=field) for field in fields]
+        return [SelectElement(value=field) for field in fields.keys()]
 
     @sync_action("list_primary_keys")
     def list_primary_keys(self):
         fields = self.client.get_object_fields(self.cfg.endpoint)
-        return [SelectElement(value=field) for field in fields]
+        return [SelectElement(value=field) for field in fields.keys()]
 
     @sync_action("testConnection")
     def test_connection(self):
