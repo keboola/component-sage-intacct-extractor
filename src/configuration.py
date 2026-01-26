@@ -12,7 +12,7 @@ class LoadType(str, Enum):
 class Destination(BaseModel):
     table_name: str = ""
     load_type: LoadType = Field(default=LoadType.incremental_load)
-    incremental_field: str = "WHENMODIFIED"
+    incremental_field: str = ""
     primary_key: list[str] = Field(default_factory=list)
 
     @computed_field

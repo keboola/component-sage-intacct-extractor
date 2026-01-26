@@ -1,6 +1,6 @@
 import logging
 import time
-from collections.abc import Callable, Generator
+from collections.abc import Generator
 
 import requests
 from keboola.component.exceptions import UserException
@@ -14,7 +14,6 @@ class SageIntacctClient:
         company_id: str,
         refresh_token: str,
         access_token: str | None = None,
-        on_token_refresh: Callable[[str], None] | None = None,
     ):
         self.app_key = app_key
         self.app_secret = app_secret
@@ -23,7 +22,6 @@ class SageIntacctClient:
         self._access_token = access_token
         self._session = requests.Session()
         self._base_url = "https://api.intacct.com/ia/api/v1"
-        self._on_token_refresh = on_token_refresh
 
         if not self._access_token:
             self._authenticate()
@@ -47,10 +45,7 @@ class SageIntacctClient:
             self._access_token = token_data.get("access_token")
             if "refresh_token" in token_data:
                 self._refresh_token = token_data["refresh_token"]
-                logging.info("Refresh token was rotated, updating stored token")
-                # Notify component to save the new refresh token immediately
-                if self._on_token_refresh:
-                    self._on_token_refresh(self._refresh_token)
+                logging.info("Refresh token was rotated")
 
             logging.info("Successfully authenticated with Sage Intacct")
 
@@ -116,36 +111,8 @@ class SageIntacctClient:
         response = self._make_request("GET", "/services/core/model", params=params)
         data = response.json()
 
-        result = data.get("ia::result")
+        fields = list(data.get('ia::result', {}).get('fields', {}).keys())
 
-        if not result:
-            logging.warning(f"No model information found for {object_path}")
-            return []
-
-        if isinstance(result, list):
-            if not result:
-                return []
-            result = result[0]
-
-        fields = []
-        model_fields = result.get("fields", {})
-        model_groups = result.get("groups", {})
-
-        if not model_fields:
-            logging.warning(f"No fields found in model for {object_path}")
-            return self._get_fields_from_data(object_path)
-
-        for field_name in model_fields.keys():
-            if not field_name.startswith("ia::"):
-                fields.append(field_name)
-
-        for group_info in model_groups.values():
-            group_fields = group_info.get("fields", {})
-            for field_name in group_fields.keys():
-                if not field_name.startswith("ia::"):
-                    fields.append(field_name)
-
-        logging.info(f"Found {len(fields)} fields for {object_path}")
         return fields
 
     def get_primary_key(self, object_path: str) -> list[str]:
@@ -188,14 +155,19 @@ class SageIntacctClient:
     ) -> Generator[list[dict], None, None]:
         logging.info(f"Starting data extraction for object: {object_path}")
 
+        # If no fields specified, get all available fields from model API
+        if not fields:
+            logging.info("No fields specified, fetching all available fields from model API")
+            fields = self.get_object_fields(object_path)
+            if not fields:
+                raise UserException(f"Could not determine fields for object: {object_path}")
+
         query_payload = {
             "object": object_path,
             "start": 1,
             "size": 1000,
+            "fields": fields,
         }
-
-        if fields:
-            query_payload["fields"] = fields
 
         if incremental_field and incremental_value:
             logging.info(f"Using incremental filtering: {incremental_field} >= {incremental_value}")
@@ -205,9 +177,35 @@ class SageIntacctClient:
         total_records = 0
         batch = []
 
+        # Try the first query and handle field errors
+        first_attempt = True
+
         while True:
             response = self._make_request("POST", "/services/core/query", json=query_payload)
             data = response.json()
+
+            # Check if response contains an error
+            result = data.get("ia::result", {})
+            if isinstance(result, dict) and "ia::error" in result:
+                error_info = result["ia::error"]
+                error_msg = error_info.get("message", "")
+
+                # If first query fails due to invalid field, try to extract which field and retry
+                if first_attempt and "field does not exist" in error_msg.lower():
+                    # Try to extract field name from error placeholders or message
+                    placeholders = error_info.get("additionalInfo", {}).get("placeholders", {})
+                    problem_field = placeholders.get("FIELD")
+
+                    if problem_field and problem_field in query_payload.get("fields", []):
+                        logging.warning(f"Field '{problem_field}' does not exist, removing and retrying")
+                        query_payload["fields"] = [f for f in query_payload["fields"] if f != problem_field]
+                        first_attempt = False
+                        continue
+
+                # If we can't handle the error, raise it
+                raise UserException(f"API Error: {error_msg}")
+
+            first_attempt = False
 
             results = data.get("ia::result", [])
             if not results:

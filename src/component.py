@@ -25,20 +25,19 @@ class Component(ComponentBase):
     def __init__(self):
         super().__init__()
         self.cfg = Configuration(**self.configuration.parameters)
-        self.refresh_token = None
+        self.state = self.get_state_file()
         self.client = self._init_client()
 
     def run(self):
         logging.info(f'Downloading data for endpoint "{self.cfg.endpoint}".')
-
-        state = self.get_state_file()
+        self._save_refresh_token()
 
         incremental_field = None
         incremental_value = None
 
         if self.cfg.destination.incremental:
-            incremental_field = self.cfg.destination.incremental_field or "WHENMODIFIED"
-            incremental_value = state.get(STATE_LAST_RUN) or self.cfg.initial_since or None
+            incremental_field = self.cfg.destination.incremental_field
+            incremental_value = self.state.get(STATE_LAST_RUN) or self.cfg.initial_since or None
 
             if incremental_field and incremental_value:
                 logging.info(f"Using incremental filtering: {incremental_field} >= {incremental_value}")
@@ -76,14 +75,7 @@ class Component(ComponentBase):
                 res_table.add_column(column_name)
             self.write_manifest(res_table)
 
-        credentials = self.configuration.oauth_credentials
-        self.write_state_file(
-            {
-                STATE_REFRESH_TOKEN: self.refresh_token,
-                STATE_AUTH_ID: credentials["id"],
-                STATE_LAST_RUN: datetime.now(timezone.utc).isoformat(),
-            }
-        )
+        self._save_refresh_token()
 
     @backoff.on_exception(backoff.expo, requests.exceptions.RequestException, max_tries=5)
     def encrypt(self, token: str) -> str:
@@ -139,37 +131,37 @@ class Component(ComponentBase):
         except (ValueError, json.JSONDecodeError) as e:
             raise UserException(f"Failed to decode JWT token: {str(e)}")
 
-    def _save_refresh_token(self, new_refresh_token: str):
-        """Save the refresh token immediately via Storage API and to instance variable for statefile."""
-        # Store to self variable - will be saved to statefile at end of run
-        self.refresh_token = new_refresh_token
+    def _save_refresh_token(self):
+        """Save the refresh token via Storage API."""
 
-        credentials = self.configuration.oauth_credentials
-        logging.debug("Saving new refresh token via Storage API")
+        state_dict = self.state
+        state_dict[STATE_REFRESH_TOKEN] = self.client.refresh_token
 
-        try:
-            encrypted_token = self.encrypt(new_refresh_token)
-        except requests.exceptions.RequestException:
-            logging.warning("Encrypt API is unavailable. Token will be saved to statefile at end of run.")
-            return
+        # if self.configuration.action in ("run", ""):
+        if True:
+            state_dict[STATE_LAST_RUN] = datetime.now(timezone.utc).isoformat()
+            self.write_state_file(state_dict)
 
-        new_state = {
-            "component": {
-                STATE_REFRESH_TOKEN: encrypted_token,
-                STATE_AUTH_ID: credentials["id"],
-            }
-        }
-
-        try:
-            self.update_config_state(
-                component_id=self.environment_variables.component_id,
-                config_id=self.environment_variables.config_id,
-                state=new_state,
-                branch_id=self.environment_variables.branch_id,
-            )
-            logging.info("Refresh token saved via Storage API")
-        except requests.exceptions.RequestException:
-            logging.warning("Storage API unavailable. Token will be saved to statefile at end of run.")
+        # Try to save via Storage API
+        if self.environment_variables.stack_id:
+            logging.info("Saving refresh token via Storage API")
+            try:
+                encrypted_token = self.encrypt(self.client.refresh_token)
+                new_state = {
+                    "component": {
+                        STATE_REFRESH_TOKEN: encrypted_token,
+                        STATE_AUTH_ID: self.configuration.oauth_credentials["id"],
+                    }
+                }
+                self.update_config_state(
+                    component_id=self.environment_variables.component_id,
+                    config_id=self.environment_variables.config_id,
+                    state=new_state,
+                    branch_id=self.environment_variables.branch_id,
+                )
+                logging.info("Refresh token saved via Storage API")
+            except requests.exceptions.RequestException as e:
+                logging.warning(f"Failed to save token via Storage API: {e}. Will save to state file at end of run.")
 
     def _init_client(self) -> SageIntacctClient:
         credentials = self.configuration.oauth_credentials
@@ -180,11 +172,11 @@ class Component(ComponentBase):
         app_key = credentials.appKey
         app_secret = credentials.appSecret
 
-        state = self.get_state_file()
-        refresh_token = state.get(STATE_REFRESH_TOKEN)
-        auth_id = state.get(STATE_AUTH_ID)
+        refresh_token = self.state.get(STATE_REFRESH_TOKEN)
+        auth_id = self.state.get(STATE_AUTH_ID)
 
-        if refresh_token and auth_id == credentials["id"]:
+        # if refresh_token and auth_id == credentials["id"]:
+        if refresh_token:
             logging.info("Using refresh token from state file")
             access_token = None
         else:
@@ -198,12 +190,10 @@ class Component(ComponentBase):
         token_payload = self._decode_jwt_payload(refresh_token)
         company_id = token_payload.get("cnyId", "")
 
+        # Create client (may refresh token during initialization)
         client = SageIntacctClient(
             app_key, app_secret, company_id, refresh_token, access_token
         )
-
-        if self.environment_variables.stack_id:
-            self._save_refresh_token(client.refresh_token)
 
         return client
 
