@@ -22,11 +22,11 @@ This extractor allows you to extract data from Sage Intacct objects (such as CUS
 | **Feature**             | **Description**                                                    |
 |-------------------------|--------------------------------------------------------------------|
 | OAuth 2.0               | Secure authentication with automatic refresh token rotation       |
-| Row-Based Configuration | Configure multiple endpoints/objects to extract                   |
-| Incremental Loading     | Extract only new or modified records using WHENMODIFIED field     |
+| Multiple Endpoints      | Configure multiple endpoints/objects to extract in a single run   |
+| Incremental Loading     | Extract only new or modified records using configurable field     |
 | Full Load Support       | Option to extract all data on each run                            |
 | Dynamic Schema Discovery| Automatically detect available objects and their fields           |
-| Auto Primary Key Detection | Automatically identifies primary keys from API metadata        |
+| Configurable Primary Keys | Specify primary key columns for each endpoint                   |
 | Cursor-Based Pagination | Efficiently handles large datasets with memory-safe pagination   |
 
 ## Supported Endpoints
@@ -45,45 +45,49 @@ To see all available endpoints for your instance, use the **list_endpoints** syn
 
 ## Configuration
 
-### Root Configuration
+### Endpoints
 
-- **Debug Mode** (optional): Enable debug logging for troubleshooting
+Configure one or more Sage Intacct objects to extract. Each endpoint configuration includes:
 
-### Row Configuration
+- **Object/Endpoint**: The Sage Intacct object path to extract (e.g., `accounts-receivable/customer`, `general-ledger/account`). Use the UI dropdown to select from available objects.
+- **Fields**: Specific fields to extract from the object. Leave empty to extract all available fields. Use the UI dropdown to select specific fields.
+- **Table Name** (optional): Name of the output table in Keboola Storage (defaults to endpoint name if not specified)
+- **Primary Key**: Primary key columns for the output table (defaults to `["id"]`)
+- **Incremental Field**: Field used for incremental filtering (defaults to `id`). Only used when Load Type is set to incremental load.
+- **Initial Incremental Value** (optional): ISO datetime string (e.g., `2024-01-01T00:00:00Z`) used for the first incremental run when no state exists. Only applicable when using incremental load type.
 
-Each configuration row represents one Sage Intacct object to extract:
+### Destination
 
-#### Object/Endpoint
-The Sage Intacct object name to extract (e.g., CUSTOMER, INVOICE, VENDOR). Use the UI dropdown to select from available objects.
+Global destination settings that apply to all endpoints:
 
-#### Fields
-Specific fields to extract from the object. Leave empty to extract all available fields. Use the UI dropdown to select specific fields.
-
-#### Initial Incremental Value
-ISO datetime string (e.g., `2024-01-01T00:00:00Z`) used for the first incremental run when no state exists. Only applicable when using incremental load type.
-
-#### Destination Settings
-
-- **Table Name**: Name of the output table in Keboola Storage (defaults to endpoint name if not specified)
 - **Load Type**:
   - `incremental_load` (default): Extract only new/updated records based on incremental field
   - `full_load`: Extract all records on each run
-- **Incremental Field**: Field used for incremental filtering (defaults to `WHENMODIFIED`). Only used when Load Type is incremental_load.
-- **Primary Key**: Primary key columns for the output table. Auto-detected from API metadata if left empty.
+
+### Additional Settings
+
+- **Batch Size** (optional): Number of records to fetch per API request (default: 1000, min: 1, max: 10000)
+- **Debug Mode** (optional): Enable debug logging for troubleshooting
 
 ### Example Configuration
 
 ```json
 {
-  "endpoint": "CUSTOMER",
-  "columns": ["CUSTOMERID", "NAME", "EMAIL", "STATUS"],
-  "initial_since": "2024-01-01T00:00:00Z",
+  "endpoints": [
+    {
+      "endpoint": "accounts-receivable/customer",
+      "columns": [],
+      "table_name": "customers",
+      "primary_key": ["id"],
+      "incremental_field": "id",
+      "initial_since": "2024-01-01T00:00:00Z"
+    }
+  ],
   "destination": {
-    "table_name": "customers",
-    "load_type": "incremental_load",
-    "incremental_field": "WHENMODIFIED",
-    "primary_key": ["CUSTOMERID"]
-  }
+    "load_type": "incremental_load"
+  },
+  "batch_size": 1000,
+  "debug": false
 }
 ```
 
@@ -91,10 +95,10 @@ ISO datetime string (e.g., `2024-01-01T00:00:00Z`) used for the first incrementa
 
 The component creates output tables in Keboola Storage based on your configuration:
 
-- One table per configuration row
+- One table per configured endpoint
 - Column names match the field names from Sage Intacct
-- Primary keys are set based on configuration or auto-detected from API
-- Incremental tables maintain state between runs
+- Primary keys are set based on configuration (defaults to `["id"]`)
+- Incremental tables maintain state between runs for each endpoint
 
 ## Sync Actions
 
@@ -102,17 +106,14 @@ The component creates output tables in Keboola Storage based on your configurati
 Lists all available Sage Intacct objects/endpoints for your instance. Use this to discover what data you can extract.
 
 ### list_columns
-Lists all available fields for the selected endpoint, including field types and primary key indicators.
-
-### testConnection
-Tests the connection to Sage Intacct API to verify authentication is working correctly.
+Lists all available fields for the selected endpoint, including field types.
 
 ## State Management
 
 The component maintains state between runs:
 
 - **Refresh Token**: Automatically rotates and stores OAuth refresh tokens
-- **Last Run Timestamp**: Tracks the last extraction time for incremental loading
+- **Last Incremental Value**: Tracks the last incremental value per endpoint for incremental loading
 - **Auth ID**: Ensures refresh token matches current authorization
 
 ## Development

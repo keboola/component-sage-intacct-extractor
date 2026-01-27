@@ -10,15 +10,20 @@
     }
   },
   "parameters": {
-    "endpoint": "accounts-receivable/customer",
-    "columns": [],
-    "initial_since": "2024-01-01T00:00:00Z",
+    "endpoints": [
+      {
+        "endpoint": "accounts-receivable/customer",
+        "columns": [],
+        "table_name": "customers",
+        "primary_key": ["id"],
+        "incremental_field": "id",
+        "initial_since": "2024-01-01T00:00:00Z"
+      }
+    ],
     "destination": {
-      "table_name": "customers",
-      "load_type": "incremental_load",
-      "incremental_field": "WHENMODIFIED",
-      "primary_key": ["key"]
+      "load_type": "incremental_load"
     },
+    "batch_size": 1000,
     "debug": false
   },
   "image_parameters": {},

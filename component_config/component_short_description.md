@@ -1,1 +1,1 @@
-Sage Intacct Extractor short description
+Sage Intacct is a cloud-based financial management and accounting software platform for growing businesses.
