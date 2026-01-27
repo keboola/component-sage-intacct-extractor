@@ -195,7 +195,6 @@ class SageIntacctClient:
         if incremental_field and incremental_value:
             logging.info(f"Using incremental filtering: {incremental_field} >= {incremental_value}")
             query_payload["filters"] = [{"$gte": {incremental_field: incremental_value}}]
-            query_payload["filterExpression"] = "1"
 
         total_records = 0
         batch = []
