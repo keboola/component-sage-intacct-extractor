@@ -121,9 +121,6 @@ class SageIntacctClient:
 
         return fields
 
-    def get_primary_key(self, object_path: str) -> list[str]:
-        return []
-
     def _get_fields_from_data(self, object_path: str) -> list[str]:
         logging.info(f"Falling back to data inference for fields: {object_path}")
 

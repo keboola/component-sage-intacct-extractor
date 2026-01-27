@@ -65,6 +65,9 @@ class Component(ComponentBase):
         if not fields_to_extract:
             raise UserException(f"No valid fields found for object: {self.cfg.endpoint}")
 
+        table_name = self.cfg.destination.table_name or f"{self.cfg.endpoint}.csv"
+        primary_key = self.cfg.destination.primary_key
+
         incremental_field = None
         incremental_value = None
 
@@ -74,13 +77,6 @@ class Component(ComponentBase):
 
             if incremental_field and incremental_value:
                 logging.info(f"Using incremental filtering: {incremental_field} >= {incremental_value}")
-
-        table_name = self.cfg.destination.table_name or f"{self.cfg.endpoint}.csv"
-
-        primary_key = self.cfg.destination.primary_key
-        if not primary_key:
-            logging.info("Primary key not specified in configuration")
-            primary_key = []
 
         # Build schema with ColumnDefinition objects
         schema = {
@@ -243,11 +239,6 @@ class Component(ComponentBase):
 
     @sync_action("list_columns")
     def list_columns(self):
-        fields = self.client.get_object_fields(self.cfg.endpoint)
-        return [SelectElement(value=field) for field in fields.keys()]
-
-    @sync_action("list_primary_keys")
-    def list_primary_keys(self):
         fields = self.client.get_object_fields(self.cfg.endpoint)
         return [SelectElement(value=field) for field in fields.keys()]
 

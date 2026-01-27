@@ -12,8 +12,8 @@ class LoadType(str, Enum):
 class Destination(BaseModel):
     table_name: str = ""
     load_type: LoadType = Field(default=LoadType.incremental_load)
-    incremental_field: str = ""
-    primary_key: list[str] = Field(default_factory=list)
+    incremental_field: str = "id"
+    primary_key: list[str] = ["id"]
 
     @computed_field
     @property
