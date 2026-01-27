@@ -2,6 +2,7 @@ import base64
 import json
 import logging
 import os
+from io import StringIO
 
 import backoff
 import requests
@@ -9,6 +10,7 @@ from keboola.component.base import ComponentBase, sync_action
 from keboola.component.dao import ColumnDefinition, BaseType
 from keboola.component.exceptions import UserException
 from keboola.component.sync_actions import SelectElement
+from wurlitzer import pipes
 
 from client import SageIntacctClient
 from configuration import Configuration
@@ -249,25 +251,31 @@ class Component(ComponentBase):
 
     @sync_action("list_endpoints")
     def list_endpoints(self):
-        result = [SelectElement(value=obj) for obj in self.client.list_objects()]
-        self._save_refresh_token()
-        return result
+        out = StringIO()
+        with pipes(stdout=out, stderr=out):
+            result = [SelectElement(value=obj) for obj in self.client.list_objects()]
+            self._save_refresh_token()
+            return result
 
     @sync_action("list_columns")
     def list_columns(self):
-        # When called from within an endpoint array item, get the endpoint value from parameters
-        endpoint = self.configuration.parameters.get("endpoint")
-        if not endpoint:
-            return []
+        out = StringIO()
+        with pipes(stdout=out, stderr=out):
+            # When called from within an endpoint array item, get the endpoint value from parameters
+            endpoint = self.configuration.parameters.get("endpoint")
+            if not endpoint:
+                return []
 
-        fields = self.client.get_object_fields(endpoint)
-        self._save_refresh_token()
-        return [SelectElement(value=field) for field in fields.keys()]
+            fields = self.client.get_object_fields(endpoint)
+            self._save_refresh_token()
+            return [SelectElement(value=field) for field in fields.keys()]
 
     @sync_action("testConnection")
     def test_connection(self):
-        self.client.list_objects()
-        self._save_refresh_token()
+        out = StringIO()
+        with pipes(stdout=out, stderr=out):
+            self.client.list_objects()
+            self._save_refresh_token()
 
 
 if __name__ == "__main__":
