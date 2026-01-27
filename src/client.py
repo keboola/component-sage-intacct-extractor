@@ -234,7 +234,10 @@ class SageIntacctClient:
                 break
 
             for record in results:
-                clean_record = {k: v for k, v in record.items() if not k.startswith("ia::")}
+                # Only include fields that were requested and don't start with "ia::"
+                clean_record = {
+                    k: v for k, v in record.items() if not k.startswith("ia::") and k in query_payload.get("fields", [])
+                }
                 batch.append(clean_record)
                 total_records += 1
 
