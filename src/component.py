@@ -2,7 +2,6 @@ import base64
 import json
 import logging
 import os
-from datetime import datetime, timezone
 
 import backoff
 import requests
@@ -192,6 +191,7 @@ class Component(ComponentBase):
 
         state_dict = self.state
         state_dict[STATE_REFRESH_TOKEN] = self.client.refresh_token
+        state_dict[STATE_AUTH_ID] = self.configuration.oauth_credentials["id"]
         self.write_state_file(state_dict)
 
         # Try to save via Storage API
@@ -228,8 +228,7 @@ class Component(ComponentBase):
         refresh_token = self.state.get(STATE_REFRESH_TOKEN)
         auth_id = self.state.get(STATE_AUTH_ID)
 
-        # if refresh_token and auth_id == credentials["id"]:
-        if refresh_token:
+        if refresh_token and auth_id == credentials["id"]:
             logging.info("Using refresh token from state file")
             access_token = None
         else:
