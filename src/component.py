@@ -70,7 +70,7 @@ class Component(ComponentBase):
             if not fields_to_extract:
                 raise UserException(f"No valid fields found for object: {endpoint_config.endpoint}")
 
-            table_name = endpoint_config.table_name or f"{endpoint_config.endpoint}.csv"
+            table_name = endpoint_config.table_name or f"{endpoint_config.endpoint.replace('/', '_')}.csv"
 
             # Get incremental value from statefile for this endpoint
             incremental_field = None
