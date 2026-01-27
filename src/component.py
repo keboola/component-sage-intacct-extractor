@@ -204,7 +204,7 @@ class Component(ComponentBase):
                         STATE_REFRESH_TOKEN: encrypted_token,
                         STATE_AUTH_ID: self.configuration.oauth_credentials["id"],
                     },
-                    STATE_ENDPOINTS: state_dict.get(STATE_ENDPOINTS, {})
+                    STATE_ENDPOINTS: state_dict.get(STATE_ENDPOINTS, {}),
                 }
                 self.update_config_state(
                     component_id=self.environment_variables.component_id,
