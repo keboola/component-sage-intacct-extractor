@@ -3,16 +3,11 @@
   "title": "Sage Intacct Extractor Configuration",
   "required": ["endpoints"],
   "properties": {
-    "test_connection": {
-      "type": "button",
-      "format": "test-connection",
-      "propertyOrder": 1
-    },
     "endpoints": {
       "type": "array",
       "title": "Endpoints",
       "description": "List of endpoints to extract",
-      "propertyOrder": 2,
+      "propertyOrder": 1,
       "items": {
         "type": "object",
         "title": "Endpoint Configuration",
@@ -132,7 +127,7 @@
     "destination": {
       "type": "object",
       "title": "Destination",
-      "propertyOrder": 3,
+      "propertyOrder": 2,
       "required": ["load_type"],
       "properties": {
         "load_type": {
@@ -156,7 +151,7 @@
       "default": 1000,
       "minimum": 1,
       "maximum": 10000,
-      "propertyOrder": 4
+      "propertyOrder": 3
     },
     "debug": {
       "type": "boolean",
@@ -164,7 +159,7 @@
       "format": "checkbox",
       "description": "Enable debug logging for troubleshooting",
       "default": false,
-      "propertyOrder": 5
+      "propertyOrder": 4
     }
   }
 }

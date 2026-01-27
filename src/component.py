@@ -276,13 +276,6 @@ class Component(ComponentBase):
             self._save_refresh_token()
             return [SelectElement(value=field) for field in fields.keys()]
 
-    @sync_action("testConnection")
-    def test_connection(self):
-        out = StringIO()
-        with pipes(stdout=out, stderr=out):
-            self.client.list_objects()
-            self._save_refresh_token()
-
 
 if __name__ == "__main__":
     try:
