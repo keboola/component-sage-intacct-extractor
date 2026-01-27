@@ -61,9 +61,12 @@ class SageIntacctClient:
         headers["Authorization"] = f"Bearer {self._access_token}"
 
         max_retries = 3
+        last_response = None
+
         for attempt in range(max_retries):
             try:
                 response = self._session.request(method, url, headers=headers, timeout=60, **kwargs)
+                last_response = response
 
                 if response.status_code == 401:
                     logging.info("Access token expired, refreshing...")
@@ -79,6 +82,22 @@ class SageIntacctClient:
 
                 response.raise_for_status()
                 return response
+
+            except requests.exceptions.HTTPError as e:
+                if attempt == max_retries - 1:
+                    # Try to extract detailed error message from response
+                    error_details = str(e)
+                    if last_response is not None:
+                        try:
+                            error_body = last_response.json()
+                            error_details = f"{str(e)}\n\nAPI Response: {error_body}"
+                        except Exception:
+                            try:
+                                error_details = f"{str(e)}\n\nAPI Response: {last_response.text}"
+                            except Exception:
+                                pass
+                    raise UserException(f"API request failed after {max_retries} attempts: {error_details}")
+                time.sleep(2**attempt)
 
             except requests.exceptions.RequestException as e:
                 if attempt == max_retries - 1:
