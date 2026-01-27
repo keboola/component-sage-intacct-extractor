@@ -48,7 +48,9 @@ class Component(ComponentBase):
         self._save_refresh_token()
 
         # Start with existing endpoint states from statefile
-        new_endpoint_states = self.state.get(STATE_ENDPOINTS, {}).copy()
+        endpoint_states = self.state.get(STATE_ENDPOINTS, {})
+        # Ensure it's a dict (handle old state format if it's a list)
+        new_endpoint_states = endpoint_states.copy() if isinstance(endpoint_states, dict) else {}
 
         for endpoint_config in self.cfg.endpoints:
             logging.info(f'Downloading data for endpoint "{endpoint_config.endpoint}"')
