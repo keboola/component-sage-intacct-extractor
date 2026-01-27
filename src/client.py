@@ -155,6 +155,7 @@ class SageIntacctClient:
         fields: list[str],
         incremental_field: str | None = None,
         incremental_value: str | None = None,
+        batch_size: int = 1000,
     ) -> Generator[list[dict], None, None]:
         logging.info(f"Starting data extraction for object: {object_path}")
 
@@ -168,7 +169,7 @@ class SageIntacctClient:
         query_payload = {
             "object": object_path,
             "start": 1,
-            "size": 1000,
+            "size": batch_size,
             "fields": fields,
         }
 

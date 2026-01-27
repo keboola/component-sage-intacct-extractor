@@ -105,7 +105,11 @@ class Component(ComponentBase):
 
             total_rows = 0
             for batch in self.client.extract_data(
-                endpoint_config.endpoint, list(fields_to_extract.keys()), incremental_field, incremental_value
+                endpoint_config.endpoint,
+                list(fields_to_extract.keys()),
+                incremental_field,
+                incremental_value,
+                self.cfg.batch_size,
             ):
                 total_rows += len(batch)
                 writer.writerows(batch)

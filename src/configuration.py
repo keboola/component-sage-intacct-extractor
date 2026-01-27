@@ -30,6 +30,7 @@ class Destination(BaseModel):
 class Configuration(BaseModel):
     endpoints: list[Endpoint] = Field(default_factory=list)
     destination: Destination = Field(default_factory=Destination)
+    batch_size: int = 1000
     debug: bool = False
 
     def __init__(self, **data):
