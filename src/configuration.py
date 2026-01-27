@@ -9,11 +9,17 @@ class LoadType(str, Enum):
     incremental_load = "incremental_load"
 
 
-class Destination(BaseModel):
+class Endpoint(BaseModel):
+    endpoint: str
+    columns: list[str] = Field(default_factory=list)
     table_name: str = ""
-    load_type: LoadType = Field(default=LoadType.incremental_load)
-    incremental_field: str = "id"
     primary_key: list[str] = ["id"]
+    incremental_field: str = "id"
+    initial_since: str = ""
+
+
+class Destination(BaseModel):
+    load_type: LoadType = Field(default=LoadType.incremental_load)
 
     @computed_field
     @property
@@ -22,9 +28,7 @@ class Destination(BaseModel):
 
 
 class Configuration(BaseModel):
-    endpoint: str = ""
-    columns: list[str] = Field(default_factory=list)
-    initial_since: str = ""
+    endpoints: list[Endpoint] = Field(default_factory=list)
     destination: Destination = Field(default_factory=Destination)
     debug: bool = False
 

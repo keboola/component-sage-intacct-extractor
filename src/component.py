@@ -33,7 +33,7 @@ URL_SUFFIX = os.environ.get("KBC_STACKID", "connection.keboola.com").replace("co
 
 STATE_AUTH_ID = "auth_id"
 STATE_REFRESH_TOKEN = "#refresh_token"
-STATE_LAST_RUN = "last_run"
+STATE_ENDPOINTS = "endpoints"
 
 
 class Component(ComponentBase):
@@ -44,75 +44,93 @@ class Component(ComponentBase):
         self.client = self._init_client()
 
     def run(self):
-        logging.info(f'Downloading data for endpoint "{self.cfg.endpoint}".')
         self._save_refresh_token()
 
-        # Get field metadata (names and types)
-        all_fields_metadata = self.client.get_object_fields(self.cfg.endpoint)
+        # Start with existing endpoint states from statefile
+        new_endpoint_states = self.state.get(STATE_ENDPOINTS, {}).copy()
 
-        # Determine which fields to extract
-        if self.cfg.columns:
-            # User specified columns - filter metadata
-            fields_to_extract = {
-                name: all_fields_metadata.get(name, "string")
-                for name in self.cfg.columns
-                if name in all_fields_metadata
-            }
-        else:
-            # Use all available fields
-            fields_to_extract = all_fields_metadata
+        for endpoint_config in self.cfg.endpoints:
+            logging.info(f'Downloading data for endpoint "{endpoint_config.endpoint}"')
 
-        if not fields_to_extract:
-            raise UserException(f"No valid fields found for object: {self.cfg.endpoint}")
+            # Get field metadata (names and types)
+            all_fields_metadata = self.client.get_object_fields(endpoint_config.endpoint)
 
-        table_name = self.cfg.destination.table_name or f"{self.cfg.endpoint}.csv"
-        primary_key = self.cfg.destination.primary_key
-
-        incremental_field = None
-        incremental_value = None
-
-        if self.cfg.destination.incremental:
-            incremental_field = self.cfg.destination.incremental_field
-            incremental_value = self.state.get(STATE_LAST_RUN) or self.cfg.initial_since or None
-
-            if incremental_field and incremental_value:
-                logging.info(f"Using incremental filtering: {incremental_field} >= {incremental_value}")
-
-        # Build schema with ColumnDefinition objects
-        schema = {
-            col_name: ColumnDefinition(
-                data_types=BaseType(dtype=convert_to_keboola_type(sage_type)),
-                primary_key=col_name in primary_key,
+            # Determine which fields to extract
+            fields_to_extract = (
+                {
+                    name: all_fields_metadata.get(name, "string")
+                    for name in endpoint_config.columns
+                    if name in all_fields_metadata
+                }
+                if endpoint_config.columns
+                else all_fields_metadata
             )
-            for col_name, sage_type in fields_to_extract.items()
-        }
 
-        # Create table definition with schema
-        res_table = self.create_out_table_definition(
-            table_name,
-            schema=schema,
-            primary_key=primary_key,
-            incremental=self.cfg.destination.incremental,
-        )
+            if not fields_to_extract:
+                raise UserException(f"No valid fields found for object: {endpoint_config.endpoint}")
 
-        writer = SageIntacctWriter(res_table.full_path)
+            table_name = endpoint_config.table_name or f"{endpoint_config.endpoint}.csv"
 
-        total_rows = 0
-        for batch in self.client.extract_data(
-            self.cfg.endpoint, list(fields_to_extract.keys()), incremental_field, incremental_value
-        ):
-            total_rows += len(batch)
-            writer.writerows(batch)
+            # Get incremental value from statefile for this endpoint
+            incremental_field = None
+            incremental_value = None
+            last_incremental_value = None
 
-            if total_rows % 1000 == 0:
-                logging.info(f"Downloaded {total_rows} rows so far.")
+            if self.cfg.destination.incremental:
+                incremental_field = endpoint_config.incremental_field
+                endpoint_state = new_endpoint_states.get(endpoint_config.endpoint, {})
+                incremental_value = endpoint_state.get("last_incremental_value") or endpoint_config.initial_since
 
-        logging.info(f"Extraction complete. Total rows downloaded: {total_rows}")
+                if incremental_field and incremental_value:
+                    logging.info(f"Using incremental filtering: {incremental_field} >= {incremental_value}")
 
-        if total_rows > 0:
-            writer.close()
-            self.write_manifest(res_table)
+            # Build schema
+            schema = {
+                col_name: ColumnDefinition(
+                    data_types=BaseType(dtype=convert_to_keboola_type(sage_type)),
+                    primary_key=col_name in endpoint_config.primary_key,
+                )
+                for col_name, sage_type in fields_to_extract.items()
+            }
 
+            res_table = self.create_out_table_definition(
+                table_name,
+                schema=schema,
+                primary_key=endpoint_config.primary_key,
+                incremental=self.cfg.destination.incremental,
+            )
+
+            writer = SageIntacctWriter(res_table.full_path)
+
+            total_rows = 0
+            for batch in self.client.extract_data(
+                endpoint_config.endpoint, list(fields_to_extract.keys()), incremental_field, incremental_value
+            ):
+                total_rows += len(batch)
+                writer.writerows(batch)
+
+                # Track the last incremental value from this batch
+                if incremental_field and batch:
+                    for row in batch:
+                        if incremental_field in row and row[incremental_field]:
+                            last_incremental_value = row[incremental_field]
+
+                if total_rows % 1000 == 0:
+                    logging.info(f"Downloaded {total_rows} rows so far")
+
+            logging.info(f"Extraction complete for {endpoint_config.endpoint}. Total rows: {total_rows}")
+
+            if total_rows > 0:
+                writer.close()
+                self.write_manifest(res_table)
+
+            # Update state for this endpoint
+            if last_incremental_value:
+                new_endpoint_states[endpoint_config.endpoint] = {"last_incremental_value": last_incremental_value}
+
+        # Save state (preserves endpoints not in current config)
+        self.state[STATE_ENDPOINTS] = new_endpoint_states
+        self.write_state_file(self.state)
         self._save_refresh_token()
 
     @backoff.on_exception(backoff.expo, requests.exceptions.RequestException, max_tries=5)
@@ -170,26 +188,23 @@ class Component(ComponentBase):
             raise UserException(f"Failed to decode JWT token: {str(e)}")
 
     def _save_refresh_token(self):
-        """Save the refresh token via Storage API."""
+        """Save the refresh token and state via Storage API."""
 
         state_dict = self.state
         state_dict[STATE_REFRESH_TOKEN] = self.client.refresh_token
-
-        # if self.configuration.action in ("run", ""):
-        if True:
-            state_dict[STATE_LAST_RUN] = datetime.now(timezone.utc).isoformat()
-            self.write_state_file(state_dict)
+        self.write_state_file(state_dict)
 
         # Try to save via Storage API
         if self.environment_variables.stack_id:
-            logging.info("Saving refresh token via Storage API")
+            logging.info("Saving state via Storage API")
             try:
                 encrypted_token = self.encrypt(self.client.refresh_token)
                 new_state = {
                     "component": {
                         STATE_REFRESH_TOKEN: encrypted_token,
                         STATE_AUTH_ID: self.configuration.oauth_credentials["id"],
-                    }
+                    },
+                    STATE_ENDPOINTS: state_dict.get(STATE_ENDPOINTS, {})
                 }
                 self.update_config_state(
                     component_id=self.environment_variables.component_id,
@@ -197,9 +212,9 @@ class Component(ComponentBase):
                     state=new_state,
                     branch_id=self.environment_variables.branch_id,
                 )
-                logging.info("Refresh token saved via Storage API")
+                logging.info("State saved via Storage API")
             except requests.exceptions.RequestException as e:
-                logging.warning(f"Failed to save token via Storage API: {e}. Will save to state file at end of run.")
+                logging.warning(f"Failed to save state via Storage API: {e}. Will save to state file at end of run.")
 
     def _init_client(self) -> SageIntacctClient:
         credentials = self.configuration.oauth_credentials
@@ -235,16 +250,25 @@ class Component(ComponentBase):
 
     @sync_action("list_endpoints")
     def list_endpoints(self):
-        return [SelectElement(value=obj) for obj in self.client.list_objects()]
+        result = [SelectElement(value=obj) for obj in self.client.list_objects()]
+        self._save_refresh_token()
+        return result
 
     @sync_action("list_columns")
     def list_columns(self):
-        fields = self.client.get_object_fields(self.cfg.endpoint)
+        # When called from within an endpoint array item, get the endpoint value from parameters
+        endpoint = self.configuration.parameters.get("endpoint")
+        if not endpoint:
+            return []
+
+        fields = self.client.get_object_fields(endpoint)
+        self._save_refresh_token()
         return [SelectElement(value=field) for field in fields.keys()]
 
     @sync_action("testConnection")
     def test_connection(self):
         self.client.list_objects()
+        self._save_refresh_token()
 
 
 if __name__ == "__main__":
