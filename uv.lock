@@ -128,18 +128,6 @@ wheels = [
 ]
 
 [[package]]
-name = "keboola-http-client"
-version = "1.0.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/bd/46/81805cea9f7eff8af310a43e39b312794c9143b89fdcfdc5f502ed1818c6/keboola.http_client-1.0.1.tar.gz", hash = "sha256:58f828c61a709ac484e85e2acb5e78eae2db402e7846769b739a6c336384fa81", size = 10513 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/27/18/293557d9245a1ec0e0826202ca341bb769033121d1bd1991226db908a5df/keboola.http_client-1.0.1-py3-none-any.whl", hash = "sha256:5d570789433c65325937f6d466cc6b8edc0558f984f03846f0200ae5c5b4b140", size = 8958 },
-]
-
-[[package]]
 name = "keboola-utils"
 version = "1.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -332,7 +320,6 @@ dependencies = [
     { name = "flake8" },
     { name = "freezegun" },
     { name = "keboola-component" },
-    { name = "keboola-http-client" },
     { name = "keboola-utils" },
     { name = "mock" },
     { name = "pydantic" },
@@ -347,7 +334,6 @@ requires-dist = [
     { name = "flake8", specifier = ">=7.2.0" },
     { name = "freezegun", specifier = ">=1.5.1" },
     { name = "keboola-component", specifier = ">=1.6.10" },
-    { name = "keboola-http-client", specifier = ">=1.0.1" },
     { name = "keboola-utils", specifier = ">=1.1.0" },
     { name = "mock", specifier = ">=5.2.0" },
     { name = "pydantic", specifier = ">=2.11.3" },

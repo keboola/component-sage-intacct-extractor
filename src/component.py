@@ -103,33 +103,31 @@ class Component(ComponentBase):
                 incremental=self.cfg.destination.incremental,
             )
 
-            writer = SageIntacctWriter(res_table.full_path)
+            with SageIntacctWriter(res_table.full_path) as writer:
+                total_rows = 0
+                for batch in self.client.extract_data(
+                    endpoint_config.endpoint,
+                    list(fields_to_extract.keys()),
+                    incremental_field,
+                    incremental_value,
+                    self.cfg.batch_size,
+                ):
+                    total_rows += len(batch)
+                    writer.writerows(batch)
 
-            total_rows = 0
-            for batch in self.client.extract_data(
-                endpoint_config.endpoint,
-                list(fields_to_extract.keys()),
-                incremental_field,
-                incremental_value,
-                self.cfg.batch_size,
-            ):
-                total_rows += len(batch)
-                writer.writerows(batch)
+                    # Track the last incremental value from this batch
+                    if incremental_field and batch:
+                        for row in batch:
+                            if incremental_field in row and row[incremental_field]:
+                                last_incremental_value = row[incremental_field]
 
-                # Track the last incremental value from this batch
-                if incremental_field and batch:
-                    for row in batch:
-                        if incremental_field in row and row[incremental_field]:
-                            last_incremental_value = row[incremental_field]
+                    if total_rows % 1000 == 0:
+                        logging.info(f"Downloaded {total_rows} rows so far")
 
-                if total_rows % 1000 == 0:
-                    logging.info(f"Downloaded {total_rows} rows so far")
+                logging.info(f"Extraction complete for {endpoint_config.endpoint}. Total rows: {total_rows}")
 
-            logging.info(f"Extraction complete for {endpoint_config.endpoint}. Total rows: {total_rows}")
-
-            if total_rows > 0:
-                writer.close()
-                self.write_manifest(res_table)
+                if total_rows > 0:
+                    self.write_manifest(res_table)
 
             # Update state for this endpoint
             if last_incremental_value:
