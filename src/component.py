@@ -7,7 +7,7 @@ from io import StringIO
 import backoff
 import requests
 from keboola.component.base import ComponentBase, sync_action
-from keboola.component.dao import ColumnDefinition, BaseType
+from keboola.component.dao import BaseType, ColumnDefinition
 from keboola.component.exceptions import UserException
 from keboola.component.sync_actions import SelectElement
 from wurlitzer import pipes
