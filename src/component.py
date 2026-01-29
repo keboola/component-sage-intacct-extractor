@@ -12,7 +12,7 @@ from keboola.component.exceptions import UserException
 from keboola.component.sync_actions import SelectElement
 from wurlitzer import pipes
 
-from client import SageIntacctClient
+from client import SageIntacctClient, SageIntacctClientConfig
 from configuration import Configuration
 from writer import SageIntacctWriter
 
@@ -248,8 +248,17 @@ class Component(ComponentBase):
         token_payload = self._decode_jwt_payload(refresh_token)
         company_id = token_payload.get("cnyId", "")
 
+        # Create client config
+        config = SageIntacctClientConfig(
+            app_key=app_key,
+            app_secret=app_secret,
+            company_id=company_id,
+            refresh_token=refresh_token,
+            access_token=access_token,
+        )
+
         # Create client (may refresh token during initialization)
-        client = SageIntacctClient(app_key, app_secret, company_id, refresh_token, access_token)
+        client = SageIntacctClient(config)
 
         return client
 

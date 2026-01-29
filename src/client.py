@@ -1,25 +1,28 @@
 import logging
 import time
 from collections.abc import Generator
+from dataclasses import dataclass
 
 import requests
 from keboola.component.exceptions import UserException
 
 
+@dataclass
+class SageIntacctClientConfig:
+    app_key: str
+    app_secret: str
+    company_id: str
+    refresh_token: str
+    access_token: str | None = None
+
+
 class SageIntacctClient:
-    def __init__(
-        self,
-        app_key: str,
-        app_secret: str,
-        company_id: str,
-        refresh_token: str,
-        access_token: str | None = None,
-    ):
-        self.app_key = app_key
-        self.app_secret = app_secret
-        self.company_id = company_id
-        self._refresh_token = refresh_token
-        self._access_token = access_token
+    def __init__(self, config: SageIntacctClientConfig):
+        self.app_key = config.app_key
+        self.app_secret = config.app_secret
+        self.company_id = config.company_id
+        self._refresh_token = config.refresh_token
+        self._access_token = config.access_token
         self._session = requests.Session()
         self._base_url = "https://api.intacct.com/ia/api/v1"
 
