@@ -55,6 +55,18 @@ class SageIntacctClient:
         except requests.exceptions.RequestException as e:
             raise UserException(f"Authentication failed: {str(e)}")
 
+    def _get_error_details(self, exception: Exception, response: requests.Response | None) -> str:
+        """Extract detailed error information from response."""
+        error_msg = str(exception)
+        if response is None:
+            return error_msg
+
+        try:
+            error_body = response.json()
+            return f"{error_msg}\n\nAPI Response: {error_body}"
+        except Exception:
+            return f"{error_msg}\n\nAPI Response: {response.text}"
+
     def _make_request(self, method: str, endpoint: str, **kwargs) -> requests.Response:
         if not self._access_token:
             self._authenticate()
@@ -64,49 +76,40 @@ class SageIntacctClient:
         headers["Authorization"] = f"Bearer {self._access_token}"
 
         max_retries = 3
-        last_response = None
 
         for attempt in range(max_retries):
             try:
                 response = self._session.request(method, url, headers=headers, timeout=60, **kwargs)
-                last_response = response
 
+                # Handle auth errors - refresh token and retry
                 if response.status_code == 401:
                     logging.info("Access token expired, refreshing...")
                     self._authenticate()
                     headers["Authorization"] = f"Bearer {self._access_token}"
                     continue
 
+                # Handle rate limiting - wait and retry
                 if response.status_code == 429:
                     retry_after = int(response.headers.get("Retry-After", 60))
                     logging.warning(f"Rate limited. Waiting {retry_after} seconds...")
                     time.sleep(retry_after)
                     continue
 
+                # Raise for other HTTP errors (4xx, 5xx)
                 response.raise_for_status()
                 return response
 
-            except requests.exceptions.HTTPError as e:
-                if attempt == max_retries - 1:
-                    # Try to extract detailed error message from response
-                    error_details = str(e)
-                    if last_response is not None:
-                        try:
-                            error_body = last_response.json()
-                            error_details = f"{str(e)}\n\nAPI Response: {error_body}"
-                        except Exception:
-                            try:
-                                error_details = f"{str(e)}\n\nAPI Response: {last_response.text}"
-                            except Exception:
-                                pass
-                    raise UserException(f"API request failed after {max_retries} attempts: {error_details}")
-                time.sleep(2**attempt)
-
             except requests.exceptions.RequestException as e:
+                # Last attempt - fail with detailed error
                 if attempt == max_retries - 1:
-                    raise UserException(f"API request failed after {max_retries} attempts: {str(e)}")
+                    response_obj = getattr(e, "response", None)
+                    error_details = self._get_error_details(e, response_obj)
+                    raise UserException(f"API request failed after {max_retries} attempts: {error_details}")
+
+                # Not last attempt - wait with exponential backoff and retry
                 time.sleep(2**attempt)
 
+        # Should never reach here
         raise UserException("API request failed: max retries exceeded")
 
     def list_objects(self) -> list[str]:
@@ -244,8 +247,10 @@ class SageIntacctClient:
                 batch.append(clean_record)
                 total_records += 1
 
-                if len(batch) >= 100:
+                if total_records % 100 == 0:
                     logging.info(f"Extracted {total_records} records so far...")
+
+                if len(batch) >= batch_size:
                     yield batch
                     batch = []
 
