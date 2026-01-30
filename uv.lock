@@ -1,35 +1,6 @@
 version = 1
 revision = 1
-requires-python = ">=3.13"
-
-[[package]]
-name = "sage-intacct-extractor"
-source = { virtual = "." }
-dependencies = [
-    { name = "flake8" },
-    { name = "freezegun" },
-    { name = "keboola-component" },
-    { name = "keboola-http-client" },
-    { name = "keboola-utils" },
-    { name = "mock" },
-    { name = "pydantic" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "flake8", specifier = ">=7.2.0" },
-    { name = "freezegun", specifier = ">=1.5.1" },
-    { name = "keboola-component", specifier = ">=1.6.10" },
-    { name = "keboola-http-client", specifier = ">=1.0.1" },
-    { name = "keboola-utils", specifier = ">=1.1.0" },
-    { name = "mock", specifier = ">=5.2.0" },
-    { name = "pydantic", specifier = ">=2.11.3" },
-    { name = "ruff", specifier = ">=0.11.5" },
-]
-
-[package.metadata.requires-dev]
-dev = []
+requires-python = ">=3.13.0, <3.14"
 
 [[package]]
 name = "annotated-types"
@@ -38,6 +9,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/ee/67/531ea369ba64dcff5ec9c3402f9f51bf748cec26dde048a2f973a4eea7f5/annotated_types-0.7.0.tar.gz", hash = "sha256:aff07c09a53a08bc8cfccb9c85b05f1aa9a2a6f23728d790723543408344ce89", size = 16081 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/78/b6/6307fbef88d9b5ee7421e68d78a9f162e0da4900bc5f5793f6d3d0e34fb8/annotated_types-0.7.0-py3-none-any.whl", hash = "sha256:1f02e8b43a8fbbc3f3e0d4f0f4bfc8131bcb4eebe8849b8e5c773f3a1c582a53", size = 13643 },
+]
+
+[[package]]
+name = "backoff"
+version = "2.2.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/47/d7/5bbeb12c44d7c4f2fb5b56abce497eb5ed9f34d85701de869acedd602619/backoff-2.2.1.tar.gz", hash = "sha256:03f829f5bb1923180821643f8753b0502c3b682293992485b0eef2807afa5cba", size = 17001 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/df/73/b6e24bd22e6720ca8ee9a85a0c4a2971af8497d8f3193fa05390cbd46e09/backoff-2.2.1-py3-none-any.whl", hash = "sha256:63579f9a0628e06278f7e47b7d7d5b6ce20dc65c5e96a6f3ca99a6adca0396e8", size = 15148 },
 ]
 
 [[package]]
@@ -145,18 +125,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ef/dd/391f1e6eaae5e925f56f30788c40e38c8bce3a80ee898512e79ced2eabab/keboola.component-1.6.10.tar.gz", hash = "sha256:5f4c347e8e96bb4dff1fe1254217e88754a4edea8a1b147815552335dcfba941", size = 47336 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4c/34/301082c106bff256e2871a5c5db54d691fdad77a9d8a89a52eef30cd18ed/keboola.component-1.6.10-py3-none-any.whl", hash = "sha256:9a13b73beb71373d9a2b456eb44f902cfcfc07747c084bfbfad761b5eaaa4d93", size = 42243 },
-]
-
-[[package]]
-name = "keboola-http-client"
-version = "1.0.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/bd/46/81805cea9f7eff8af310a43e39b312794c9143b89fdcfdc5f502ed1818c6/keboola.http_client-1.0.1.tar.gz", hash = "sha256:58f828c61a709ac484e85e2acb5e78eae2db402e7846769b739a6c336384fa81", size = 10513 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/27/18/293557d9245a1ec0e0826202ca341bb769033121d1bd1991226db908a5df/keboola.http_client-1.0.1-py3-none-any.whl", hash = "sha256:5d570789433c65325937f6d466cc6b8edc0558f984f03846f0200ae5c5b4b140", size = 8958 },
 ]
 
 [[package]]
@@ -345,6 +313,36 @@ wheels = [
 ]
 
 [[package]]
+name = "sage-intacct-extractor"
+source = { virtual = "." }
+dependencies = [
+    { name = "backoff" },
+    { name = "flake8" },
+    { name = "freezegun" },
+    { name = "keboola-component" },
+    { name = "keboola-utils" },
+    { name = "mock" },
+    { name = "pydantic" },
+    { name = "requests" },
+    { name = "ruff" },
+    { name = "wurlitzer" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "backoff", specifier = ">=2.2.1" },
+    { name = "flake8", specifier = ">=7.2.0" },
+    { name = "freezegun", specifier = ">=1.5.1" },
+    { name = "keboola-component", specifier = ">=1.6.10" },
+    { name = "keboola-utils", specifier = ">=1.1.0" },
+    { name = "mock", specifier = ">=5.2.0" },
+    { name = "pydantic", specifier = ">=2.11.3" },
+    { name = "requests", specifier = ">=2.31.0" },
+    { name = "ruff", specifier = ">=0.11.5" },
+    { name = "wurlitzer", specifier = ">=3.0.0" },
+]
+
+[[package]]
 name = "six"
 version = "1.17.0"
 source = { registry = "https://pypi.org/simple" }
@@ -433,4 +431,13 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/6a/e1/0122853035b40b3f333bbb25f1939fc1045e21dd518f7f0922b60c156f7c/wrapt-1.17.2-cp313-cp313t-win32.whl", hash = "sha256:13e6afb7fe71fe7485a4550a8844cc9ffbe263c0f1a1eea569bc7091d4898555", size = 37986 },
     { url = "https://files.pythonhosted.org/packages/09/5e/1655cf481e079c1f22d0cabdd4e51733679932718dc23bf2db175f329b76/wrapt-1.17.2-cp313-cp313t-win_amd64.whl", hash = "sha256:eaf675418ed6b3b31c7a989fd007fa7c3be66ce14e5c3b27336383604c9da85c", size = 40750 },
     { url = "https://files.pythonhosted.org/packages/2d/82/f56956041adef78f849db6b289b282e72b55ab8045a75abad81898c28d19/wrapt-1.17.2-py3-none-any.whl", hash = "sha256:b18f2d1533a71f069c7f82d524a52599053d4c7166e9dd374ae2136b7f40f7c8", size = 23594 },
+]
+
+[[package]]
+name = "wurlitzer"
+version = "3.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/33/90/623f99c55c7d0727a58eb2b7dfb65cb406c561a5c2e9a95b0d6a450c473d/wurlitzer-3.1.1.tar.gz", hash = "sha256:bfb9144ab9f02487d802b9ff89dbd3fa382d08f73e12db8adc4c2fb00cd39bd9", size = 11867 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9a/24/93ce54550a9dd3fd996ed477f00221f215bf6da3580397fbc138d6036e2e/wurlitzer-3.1.1-py3-none-any.whl", hash = "sha256:0b2749c2cde3ef640bf314a9f94b24d929fe1ca476974719a6909dfc568c3aac", size = 8590 },
 ]

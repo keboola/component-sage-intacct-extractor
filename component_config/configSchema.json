@@ -1,19 +1,165 @@
 {
   "type": "object",
-  "title": "extractor configuration",
-  "required": [
-    "print_hello"
-  ],
+  "title": "Sage Intacct Extractor Configuration",
+  "required": ["endpoints"],
   "properties": {
-    "print_hello": {
-      "type": "boolean",
-      "title": "Print Hello",
-      "propertyOrder": 1
+    "endpoints": {
+      "type": "array",
+      "title": "Endpoints",
+      "description": "List of endpoints to extract",
+      "propertyOrder": 1,
+      "items": {
+        "type": "object",
+        "title": "Endpoint Configuration",
+        "required": ["endpoint"],
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "title": "Object/Endpoint",
+            "format": "select",
+            "enum": [],
+            "options": {
+              "async": {
+                "label": "Re-load endpoints",
+                "action": "list_endpoints"
+              }
+            },
+            "description": "Sage Intacct object path to extract (e.g., accounts-receivable/customer, general-ledger/account)",
+            "propertyOrder": 1
+          },
+          "columns": {
+            "type": "array",
+            "title": "Fields",
+            "format": "select",
+            "items": {
+              "type": "string",
+              "enum": []
+            },
+            "options": {
+              "async": {
+                "label": "Re-load columns",
+                "action": "list_columns",
+                "watchFor": ["endpoint"]
+              },
+              "inputAttributes": {
+                "placeholder": "Download all columns"
+              }
+            },
+            "description": "Specific fields to extract. Leave empty to extract all fields.",
+            "uniqueItems": true,
+            "default": [],
+            "propertyOrder": 2
+          },
+          "table_name": {
+            "type": "string",
+            "title": "Table Name",
+            "description": "Output table name (defaults to endpoint name if not specified)",
+            "propertyOrder": 3
+          },
+          "primary_key": {
+            "type": "array",
+            "title": "Primary Key",
+            "format": "select",
+            "items": {
+              "type": "string",
+              "enum": []
+            },
+            "options": {
+              "async": {
+                "label": "Re-load columns",
+                "action": "list_columns",
+                "watchFor": ["endpoint"]
+              },
+              "inputAttributes": {
+                "placeholder": "Select primary key fields"
+              }
+            },
+            "description": "Primary key columns for the output table. Specify the field names that uniquely identify each record.",
+            "uniqueItems": true,
+            "default": ["id"],
+            "propertyOrder": 4
+          },
+          "helper_load_type": {
+            "type": "string",
+            "description": "Helper element to watch destination.load_type for incremental field dependencies",
+            "template": "{{val}}",
+            "watch": {
+              "val": "destination.load_type"
+            },
+            "options": {
+              "hidden": true
+            }
+          },
+          "incremental_field": {
+            "type": "string",
+            "title": "Incremental Field",
+            "format": "select",
+            "enum": [],
+            "options": {
+              "async": {
+                "label": "Re-load columns",
+                "action": "list_columns",
+                "watchFor": ["endpoint"]
+              },
+              "dependencies": {
+                "helper_load_type": "incremental_load"
+              }
+            },
+            "description": "Field for incremental filtering.",
+            "default": "id",
+            "propertyOrder": 5
+          },
+          "initial_since": {
+            "type": "string",
+            "title": "Initial Incremental Value",
+            "description": "Only used on first run when no state exists.",
+            "format": "date-time",
+            "propertyOrder": 6,
+            "options": {
+              "dependencies": {
+                "helper_load_type": "incremental_load"
+              }
+            }
+          }
+        }
+      }
+    },
+    "destination": {
+      "type": "object",
+      "title": "Destination",
+      "propertyOrder": 2,
+      "required": ["load_type"],
+      "properties": {
+        "load_type": {
+          "type": "string",
+          "format": "select",
+          "title": "Load Type",
+          "description": "If Full load is used, the destination tables will be overwritten every run. If incremental load is used, data will be upserted into the destination tables.",
+          "default": "incremental_load",
+          "propertyOrder": 1,
+          "enum": ["full_load", "incremental_load"],
+          "options": {
+            "enum_titles": ["Full Load", "Incremental Load"]
+          }
+        }
+      }
+    },
+    "batch_size": {
+      "type": "integer",
+      "title": "Batch Size",
+      "description": "Number of records to fetch per API request",
+      "default": 1000,
+      "minimum": 1,
+      "maximum": 10000,
+      "propertyOrder": 3
     },
     "debug": {
       "type": "boolean",
-      "title": "Debug",
-      "propertyOrder": 2
+      "title": "Debug Mode",
+      "format": "checkbox",
+      "description": "Enable debug logging for troubleshooting",
+      "default": false,
+      "propertyOrder": 4
     }
   }
 }
