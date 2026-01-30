@@ -44,7 +44,7 @@ class SageIntacctClient:
             response = self._session.post(token_url, data=payload, timeout=30)
             response.raise_for_status()
 
-            token_data = response.json()
+            token_data = self._parse_json_response(response)
             self._access_token = token_data.get("access_token")
             if "refresh_token" in token_data:
                 self._refresh_token = token_data["refresh_token"]
@@ -66,6 +66,18 @@ class SageIntacctClient:
             return f"{error_msg}\n\nAPI Response: {error_body}"
         except Exception:
             return f"{error_msg}\n\nAPI Response: {response.text}"
+
+    def _parse_json_response(self, response: requests.Response) -> dict:
+        """Safely parse JSON response with user-friendly error handling."""
+        try:
+            return response.json()
+        except Exception as e:
+            raise UserException(
+                f"Failed to parse JSON response from Sage Intacct API. "
+                f"The API returned invalid JSON data. "
+                f"Status code: {response.status_code}. "
+                f"Response preview: {response.text[:200]}"
+            ) from e
 
     def _make_request(self, method: str, endpoint: str, **kwargs) -> requests.Response:
         if not self._access_token:
@@ -116,7 +128,8 @@ class SageIntacctClient:
         logging.info("Fetching list of Sage Intacct objects from model API")
 
         response = self._make_request("GET", "/services/core/model")
-        results = response.json().get("ia::result", [])
+        data = self._parse_json_response(response)
+        results = data.get("ia::result", [])
 
         objects = [
             item["apiObject"]
@@ -135,7 +148,7 @@ class SageIntacctClient:
 
         params = {"name": object_path, "schema": "true"}
         response = self._make_request("GET", "/services/core/model", params=params)
-        data = response.json()
+        data = self._parse_json_response(response)
 
         result = data.get("ia::result", {})
         fields = {}
@@ -156,7 +169,7 @@ class SageIntacctClient:
         }
 
         response = self._make_request("POST", "/services/core/query", json=query_payload)
-        data = response.json()
+        data = self._parse_json_response(response)
 
         results = data.get("ia::result", [])
 
@@ -210,7 +223,7 @@ class SageIntacctClient:
 
         while True:
             response = self._make_request("POST", "/services/core/query", json=query_payload)
-            data = response.json()
+            data = self._parse_json_response(response)
 
             # Check if response contains an error
             result = data.get("ia::result", {})
