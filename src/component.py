@@ -111,6 +111,7 @@ class Component(ComponentBase):
                     incremental_field,
                     incremental_value,
                     self.cfg.batch_size,
+                    self.cfg.locations or None,
                 ):
                     total_rows += len(batch)
                     writer.writerows(batch)
@@ -282,6 +283,14 @@ class Component(ComponentBase):
             fields = self.client.get_object_fields(endpoint)
             self._save_refresh_token()
             return [SelectElement(value=field) for field in fields.keys()]
+
+    @sync_action("list_locations")
+    def list_locations(self):
+        out = StringIO()
+        with pipes(stdout=out, stderr=out):
+            locations = self.client.list_locations()
+            self._save_refresh_token()
+            return [SelectElement(value=loc["id"], label=loc["name"]) for loc in locations]
 
 
 if __name__ == "__main__":

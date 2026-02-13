@@ -3,6 +3,28 @@
   "title": "Sage Intacct Extractor Configuration",
   "required": ["endpoints"],
   "properties": {
+    "locations": {
+      "type": "array",
+      "title": "Locations",
+      "format": "select",
+      "items": {
+        "type": "string",
+        "enum": []
+      },
+      "options": {
+        "async": {
+          "label": "Re-load locations",
+          "action": "list_locations"
+        },
+        "inputAttributes": {
+          "placeholder": "Select locations (leave empty for all)"
+        }
+      },
+      "description": "Filter data by specific locations. Leave empty to include all locations.",
+      "uniqueItems": true,
+      "default": [],
+      "propertyOrder": 0
+    },
     "endpoints": {
       "type": "array",
       "title": "Endpoints",
