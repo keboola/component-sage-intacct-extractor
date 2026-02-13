@@ -35,6 +35,8 @@ Keboola component for extracting data from Sage Intacct using OAuth 2.0 authenti
 
 This extractor allows you to extract data from Sage Intacct objects (such as CUSTOMER, INVOICE, VENDOR, etc.) into Keboola Storage tables. It supports both full and incremental loading, with automatic refresh token management and cursor-based pagination.
 
+**API Rate Limits:** Sage Intacct Tier 1 includes 100,000 API requests per month for free. We highly recommend using incremental load to minimize API usage and stay within your quota.
+
 ##  2. <a name='Prerequisites'></a>Prerequisites
 
 - Sage Intacct account with API access
@@ -90,7 +92,7 @@ Global destination settings that apply to all endpoints:
 
 ###  5.3. <a name='AdditionalSettings'></a>Additional Settings
 
-- **Batch Size** (optional): Number of records to fetch per API request (default: 1000, min: 1, max: 10000)
+- **Page Size** (optional): Number of records to fetch per API request (default: 1000, range: 100-4000)
 - **Debug Mode** (optional): Enable debug logging for troubleshooting
 
 ###  5.4. <a name='ExampleConfiguration'></a>Example Configuration
