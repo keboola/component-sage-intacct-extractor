@@ -209,6 +209,7 @@ class SageIntacctClient:
             "start": 1,
             "size": batch_size,
             "fields": fields,
+            "filterParameters": {"includePrivate": True},
         }
 
         if incremental_field and incremental_value:
