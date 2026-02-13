@@ -194,6 +194,7 @@ class SageIntacctClient:
         incremental_field: str | None = None,
         incremental_value: str | None = None,
         batch_size: int = 1000,
+        locations: list[str] | None = None,
     ) -> Generator[list[dict], None, None]:
         logging.info(f"Starting data extraction for object: {object_path}")
 
@@ -212,9 +213,17 @@ class SageIntacctClient:
             "filterParameters": {"includePrivate": True},
         }
 
+        filters = []
         if incremental_field and incremental_value:
             logging.info(f"Using incremental filtering: {incremental_field} >= {incremental_value}")
-            query_payload["filters"] = [{"$gte": {incremental_field: incremental_value}}]
+            filters.append({"$gte": {incremental_field: incremental_value}})
+
+        if locations:
+            logging.info(f"Filtering by locations: {locations}")
+            filters.append({"$in": {"location.id": locations}})
+
+        if filters:
+            query_payload["filters"] = filters
 
         total_records = 0
         batch = []
@@ -241,6 +250,15 @@ class SageIntacctClient:
                     if problem_field and problem_field in query_payload.get("fields", []):
                         logging.warning(f"Field '{problem_field}' does not exist, removing and retrying")
                         query_payload["fields"] = [f for f in query_payload["fields"] if f != problem_field]
+                        first_attempt = False
+                        continue
+
+                    # Handle location.id not supported for this object
+                    if problem_field == "location.id" and "filters" in query_payload:
+                        logging.warning(f"Location filter not supported for {object_path}, skipping filter")
+                        query_payload["filters"] = [f for f in query_payload["filters"] if "location.id" not in str(f)]
+                        if not query_payload["filters"]:
+                            del query_payload["filters"]
                         first_attempt = False
                         continue
 
@@ -279,6 +297,24 @@ class SageIntacctClient:
             yield batch
 
         logging.info(f"Extraction complete. Total records: {total_records}")
+
+    def list_locations(self) -> list[dict]:
+        """List all locations with id and name."""
+        logging.info("Fetching list of locations")
+
+        query_payload = {
+            "object": "company-config/location",
+            "fields": ["id", "name"],
+            "filterParameters": {"includePrivate": True},
+        }
+
+        response = self._make_request("POST", "/services/core/query", json=query_payload)
+        data = self._parse_json_response(response)
+        results = data.get("ia::result", [])
+
+        locations = [{"id": item.get("id", ""), "name": item.get("name", "")} for item in results]
+        logging.info(f"Found {len(locations)} locations")
+        return locations
 
     @property
     def refresh_token(self) -> str:

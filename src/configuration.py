@@ -28,6 +28,7 @@ class Destination(BaseModel):
 
 
 class Configuration(BaseModel):
+    locations: list[str] = Field(default_factory=list)
     endpoints: list[Endpoint] = Field(default_factory=list)
     destination: Destination = Field(default_factory=Destination)
     batch_size: int = 1000
