@@ -212,6 +212,7 @@ class SageIntacctClient:
         incremental_field: str | None = None,
         incremental_value: str | None = None,
         batch_size: int = 1000,
+        locations: list[str] | None = None,
     ) -> Generator[list[dict], None, None]:
         logging.info(f"Starting data extraction for object: {object_path}")
 
@@ -230,9 +231,17 @@ class SageIntacctClient:
             "filterParameters": {"includePrivate": True},
         }
 
+        filters = []
         if incremental_field and incremental_value:
             logging.info(f"Using incremental filtering: {incremental_field} >= {incremental_value}")
-            query_payload["filters"] = [{"$gte": {incremental_field: incremental_value}}]
+            filters.append({"$gte": {incremental_field: incremental_value}})
+
+        if locations:
+            logging.info(f"Filtering by locations: {locations}")
+            filters.append({"$in": {"location.id": locations}})
+
+        if filters:
+            query_payload["filters"] = filters
 
         total_records = 0
         batch = []

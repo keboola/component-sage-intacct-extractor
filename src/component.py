@@ -109,6 +109,7 @@ class Component(ComponentBase):
                     incremental_field,
                     incremental_value,
                     self.cfg.batch_size,
+                    self.cfg.locations or None,
                 ):
                     total_rows += len(batch)
                     writer.writerows(batch)
