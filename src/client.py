@@ -79,6 +79,25 @@ class SageIntacctClient:
                 f"Response preview: {response.text[:200]}"
             ) from e
 
+    @staticmethod
+    def _extract_invalid_field(error_info: dict) -> str | None:
+        """Extract the offending field name from a field-not-found API error.
+
+        Handles two error shapes:
+        - Top-level: additionalInfo.placeholders.FIELD (e.g. 'location.id')
+        - Nested: details[].additionalInfo.placeholders.FIELD_PATH (e.g. 'LOCATION')
+        """
+        placeholders = error_info.get("additionalInfo", {}).get("placeholders", {})
+        field = placeholders.get("FIELD") or placeholders.get("FIELD_PATH")
+        if field:
+            return field
+        for detail in error_info.get("details", []):
+            detail_placeholders = detail.get("additionalInfo", {}).get("placeholders", {})
+            field = detail_placeholders.get("FIELD") or detail_placeholders.get("FIELD_PATH")
+            if field:
+                return field
+        return None
+
     def _make_request(self, method: str, endpoint: str, **kwargs) -> requests.Response:
         if not self._access_token:
             self._authenticate()
@@ -106,6 +125,10 @@ class SageIntacctClient:
                     logging.warning(f"Rate limited. Waiting {retry_after} seconds...")
                     time.sleep(retry_after)
                     continue
+
+                # Return structured API errors to the caller for inspection (e.g. invalid field errors)
+                if response.status_code in (400, 422):
+                    return response
 
                 # Raise for other HTTP errors (4xx, 5xx)
                 response.raise_for_status()
@@ -246,9 +269,6 @@ class SageIntacctClient:
         total_records = 0
         batch = []
 
-        # Try the first query and handle field errors
-        first_attempt = True
-
         while True:
             response = self._make_request("POST", "/services/core/query", json=query_payload)
             data = self._parse_json_response(response)
@@ -259,22 +279,32 @@ class SageIntacctClient:
                 error_info = result["ia::error"]
                 error_msg = error_info.get("message", "")
 
-                # If first query fails due to invalid field, try to extract which field and retry
-                if first_attempt and "field does not exist" in error_msg.lower():
-                    # Try to extract field name from error placeholders or message
-                    placeholders = error_info.get("additionalInfo", {}).get("placeholders", {})
-                    problem_field = placeholders.get("FIELD")
-
-                    if problem_field and problem_field in query_payload.get("fields", []):
-                        logging.warning(f"Field '{problem_field}' does not exist, removing and retrying")
+                problem_field = self._extract_invalid_field(error_info)
+                if problem_field:
+                    if problem_field in (query_payload.get("fields") or []):
+                        logging.warning(f"Field '{problem_field}' does not exist in '{object_path}', skipping")
                         query_payload["fields"] = [f for f in query_payload["fields"] if f != problem_field]
-                        first_attempt = False
                         continue
 
-                # If we can't handle the error, raise it
-                raise UserException(f"API Error: {error_msg}")
+                    existing_filters = query_payload.get("filters", [])
+                    trimmed_filters = [f for f in existing_filters if problem_field not in next(iter(f.values()), {})]
+                    if len(trimmed_filters) < len(existing_filters):
+                        logging.warning(f"Filter field '{problem_field}' not supported by '{object_path}', skipping")
+                        if trimmed_filters:
+                            query_payload["filters"] = trimmed_filters
+                        else:
+                            query_payload.pop("filters", None)
+                        continue
 
-            first_attempt = False
+                    # Field is location-related (e.g. FIELD_PATH='LOCATION') and we have a location filter
+                    if locations and "location" in problem_field.lower():
+                        logging.warning(
+                            f"Location filtering not supported by '{object_path}' (field: '{problem_field}'), skipping"
+                        )
+                        query_payload.pop("filters", None)
+                        continue
+
+                raise UserException(f"API Error: {error_msg}")
 
             results = data.get("ia::result", [])
             if not results:
