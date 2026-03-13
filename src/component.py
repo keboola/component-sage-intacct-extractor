@@ -260,6 +260,12 @@ class Component(ComponentBase):
 
         return client
 
+    @sync_action("list_locations")
+    def list_locations(self):
+        locations = self.client.list_locations()
+        self._save_refresh_token()
+        return [SelectElement(value=loc["id"], label=f"{loc['id']} - {loc.get('name', '')}") for loc in locations]
+
     @sync_action("list_endpoints")
     def list_endpoints(self):
         result = [SelectElement(value=obj) for obj in self.client.list_objects()]

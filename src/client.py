@@ -124,6 +124,24 @@ class SageIntacctClient:
         # Should never reach here
         raise UserException("API request failed: max retries exceeded")
 
+    def list_locations(self) -> list[dict]:
+        """Get available locations. Returns list of dicts with id and name."""
+        logging.info("Fetching list of Sage Intacct locations")
+
+        query_payload = {
+            "object": "company-config/location",
+            "start": 1,
+            "size": 1000,
+            "fields": ["id", "name"],
+        }
+
+        response = self._make_request("POST", "/services/core/query", json=query_payload)
+        data = self._parse_json_response(response)
+        results = data.get("ia::result", [])
+
+        logging.info(f"Found {len(results)} locations")
+        return results
+
     def list_objects(self) -> list[str]:
         logging.info("Fetching list of Sage Intacct objects from model API")
 
