@@ -17,12 +17,12 @@
     },
     "endpoint": "accounts-receivable/customer",
     "columns": [],
-    "table_name": "customers",
     "primary_key": ["id"],
     "incremental_field": "id",
     "initial_since": "2024-01-01T00:00:00Z",
     "destination": {
-      "load_type": "incremental_load"
+      "load_type": "incremental_load",
+      "table_name": "customers"
     },
     "batch_size": 1000,
     "debug": false

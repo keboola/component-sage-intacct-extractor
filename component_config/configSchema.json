@@ -1,7 +1,9 @@
 {
   "type": "object",
   "title": "Sage Intacct Extractor Configuration",
-  "required": ["endpoints"],
+  "required": [
+    "endpoints"
+  ],
   "properties": {
     "authorization": {
       "type": "object",
