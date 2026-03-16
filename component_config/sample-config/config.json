@@ -15,16 +15,12 @@
       "#client_secret": "CLIENT_SECRET",
       "username": "userId@companyId"
     },
-    "endpoints": [
-      {
-        "endpoint": "accounts-receivable/customer",
-        "columns": [],
-        "table_name": "customers",
-        "primary_key": ["id"],
-        "incremental_field": "id",
-        "initial_since": "2024-01-01T00:00:00Z"
-      }
-    ],
+    "endpoint": "accounts-receivable/customer",
+    "columns": [],
+    "table_name": "customers",
+    "primary_key": ["id"],
+    "incremental_field": "id",
+    "initial_since": "2024-01-01T00:00:00Z",
     "destination": {
       "load_type": "incremental_load"
     },

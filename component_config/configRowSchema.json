@@ -1,7 +1,7 @@
 {
   "type": "object",
   "title": "Sage Intacct Extractor Configuration",
-  "required": ["endpoints"],
+  "required": ["endpoint"],
   "properties": {
     "locations": {
       "type": "array",
@@ -25,131 +25,118 @@
       "default": [],
       "propertyOrder": 0
     },
-    "endpoints": {
+    "endpoint": {
+      "type": "string",
+      "title": "Object/Endpoint",
+      "format": "select",
+      "enum": [],
+      "options": {
+        "async": {
+          "label": "Re-load endpoints",
+          "action": "list_endpoints"
+        }
+      },
+      "description": "Sage Intacct object path to extract (e.g., accounts-receivable/customer, general-ledger/account)",
+      "propertyOrder": 1
+    },
+    "columns": {
       "type": "array",
-      "title": "Endpoints",
-      "description": "List of endpoints to extract",
-      "propertyOrder": 1,
+      "title": "Fields",
+      "format": "select",
       "items": {
-        "type": "object",
-        "title": "Endpoint Configuration",
-        "required": ["endpoint"],
-        "properties": {
-          "endpoint": {
-            "type": "string",
-            "title": "Object/Endpoint",
-            "format": "select",
-            "enum": [],
-            "options": {
-              "async": {
-                "label": "Re-load endpoints",
-                "action": "list_endpoints"
-              }
-            },
-            "description": "Sage Intacct object path to extract (e.g., accounts-receivable/customer, general-ledger/account)",
-            "propertyOrder": 1
-          },
-          "columns": {
-            "type": "array",
-            "title": "Fields",
-            "format": "select",
-            "items": {
-              "type": "string",
-              "enum": []
-            },
-            "options": {
-              "async": {
-                "label": "Re-load columns",
-                "action": "list_columns",
-                "watchFor": ["endpoint"]
-              },
-              "inputAttributes": {
-                "placeholder": "Download all columns"
-              }
-            },
-            "description": "Specific fields to extract. Leave empty to extract all fields.",
-            "uniqueItems": true,
-            "default": [],
-            "propertyOrder": 2
-          },
-          "table_name": {
-            "type": "string",
-            "title": "Table Name",
-            "description": "Output table name (defaults to endpoint name if not specified)",
-            "propertyOrder": 3
-          },
-          "primary_key": {
-            "type": "array",
-            "title": "Primary Key",
-            "format": "select",
-            "items": {
-              "type": "string",
-              "enum": []
-            },
-            "options": {
-              "async": {
-                "label": "Re-load columns",
-                "action": "list_columns",
-                "watchFor": ["endpoint"]
-              },
-              "inputAttributes": {
-                "placeholder": "Select primary key fields"
-              }
-            },
-            "description": "Primary key columns for the output table. Specify the field names that uniquely identify each record.",
-            "uniqueItems": true,
-            "default": ["id"],
-            "propertyOrder": 4
-          },
-          "helper_load_type": {
-            "type": "string",
-            "description": "Helper element to watch destination.load_type for incremental field dependencies",
-            "template": "{{val}}",
-            "watch": {
-              "val": "destination.load_type"
-            },
-            "options": {
-              "hidden": true
-            }
-          },
-          "incremental_field": {
-            "type": "string",
-            "title": "Incremental Field",
-            "format": "select",
-            "enum": [],
-            "options": {
-              "async": {
-                "label": "Re-load columns",
-                "action": "list_columns",
-                "watchFor": ["endpoint"]
-              },
-              "dependencies": {
-                "helper_load_type": "incremental_load"
-              }
-            },
-            "description": "Field for incremental filtering.",
-            "default": "id",
-            "propertyOrder": 5
-          },
-          "initial_since": {
-            "type": "string",
-            "title": "Initial Incremental Value",
-            "description": "Only used on first run when no state exists.",
-            "format": "date-time",
-            "propertyOrder": 6,
-            "options": {
-              "dependencies": {
-                "helper_load_type": "incremental_load"
-              }
-            }
-          }
+        "type": "string",
+        "enum": []
+      },
+      "options": {
+        "async": {
+          "label": "Re-load columns",
+          "action": "list_columns",
+          "watchFor": ["endpoint"]
+        },
+        "inputAttributes": {
+          "placeholder": "Download all columns"
+        }
+      },
+      "description": "Specific fields to extract. Leave empty to extract all fields.",
+      "uniqueItems": true,
+      "default": [],
+      "propertyOrder": 2
+    },
+    "table_name": {
+      "type": "string",
+      "title": "Table Name",
+      "description": "Output table name (defaults to endpoint name if not specified)",
+      "propertyOrder": 3
+    },
+    "primary_key": {
+      "type": "array",
+      "title": "Primary Key",
+      "format": "select",
+      "items": {
+        "type": "string",
+        "enum": []
+      },
+      "options": {
+        "async": {
+          "label": "Re-load columns",
+          "action": "list_columns",
+          "watchFor": ["endpoint"]
+        },
+        "inputAttributes": {
+          "placeholder": "Select primary key fields"
+        }
+      },
+      "description": "Primary key columns for the output table. Specify the field names that uniquely identify each record.",
+      "uniqueItems": true,
+      "default": ["id"],
+      "propertyOrder": 4
+    },
+    "helper_load_type": {
+      "type": "string",
+      "description": "Helper element to watch destination.load_type for incremental field dependencies",
+      "template": "{{val}}",
+      "watch": {
+        "val": "destination.load_type"
+      },
+      "options": {
+        "hidden": true
+      }
+    },
+    "incremental_field": {
+      "type": "string",
+      "title": "Incremental Field",
+      "format": "select",
+      "enum": [],
+      "options": {
+        "async": {
+          "label": "Re-load columns",
+          "action": "list_columns",
+          "watchFor": ["endpoint"]
+        },
+        "dependencies": {
+          "helper_load_type": "incremental_load"
+        }
+      },
+      "description": "Field for incremental filtering.",
+      "default": "id",
+      "propertyOrder": 5
+    },
+    "initial_since": {
+      "type": "string",
+      "title": "Initial Incremental Value",
+      "description": "Only used on first run when no state exists.",
+      "format": "date-time",
+      "propertyOrder": 6,
+      "options": {
+        "dependencies": {
+          "helper_load_type": "incremental_load"
         }
       }
     },
     "destination": {
       "type": "object",
       "title": "Destination",
-      "propertyOrder": 2,
+      "propertyOrder": 7,
       "required": ["load_type"],
       "properties": {
         "load_type": {
@@ -173,7 +160,7 @@
       "default": 1000,
       "minimum": 100,
       "maximum": 4000,
-      "propertyOrder": 3
+      "propertyOrder": 8
     },
     "debug": {
       "type": "boolean",
@@ -181,7 +168,7 @@
       "format": "checkbox",
       "description": "Enable debug logging for troubleshooting",
       "default": false,
-      "propertyOrder": 4
+      "propertyOrder": 9
     }
   }
 }
