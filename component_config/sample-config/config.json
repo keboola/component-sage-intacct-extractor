@@ -10,6 +10,11 @@
     }
   },
   "parameters": {
+    "authorization": {
+      "#client_id": "CLIENT_ID",
+      "#client_secret": "CLIENT_SECRET",
+      "username": "userId@companyId"
+    },
     "endpoints": [
       {
         "endpoint": "accounts-receivable/customer",
@@ -26,23 +31,5 @@
     "batch_size": 1000,
     "debug": false
   },
-  "image_parameters": {},
-  "authorization": {
-    "oauth_api": {
-      "id": "OAUTH_API_ID",
-      "credentials": {
-        "id": "main",
-        "authorizedFor": "Myself",
-        "creator": {
-          "id": "1234",
-          "description": "user@example.com"
-        },
-        "created": "2024-01-31 00:13:30",
-        "#data": "{\"company_id\":\"COMPANY123\",\"refresh_token\":\"sample_refresh_token_here\"}",
-        "oauthVersion": "2.0",
-        "appKey": "sample_app_key",
-        "#appSecret": "sample_app_secret"
-      }
-    }
-  }
+  "image_parameters": {}
 }

@@ -1,7 +1,15 @@
 from enum import Enum
 
 from keboola.component.exceptions import UserException
-from pydantic import BaseModel, Field, ValidationError, computed_field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, computed_field
+
+
+class Authorization(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    client_id: str = Field(alias="#client_id", default="")
+    client_secret: str = Field(alias="#client_secret", default="")
+    username: str = ""
 
 
 class LoadType(str, Enum):
@@ -28,6 +36,7 @@ class Destination(BaseModel):
 
 
 class Configuration(BaseModel):
+    authorization: Authorization = Field(default_factory=Authorization)
     endpoints: list[Endpoint] = Field(default_factory=list)
     locations: list[str] = Field(default_factory=list)
     destination: Destination = Field(default_factory=Destination)

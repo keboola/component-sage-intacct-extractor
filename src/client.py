@@ -9,19 +9,17 @@ from keboola.component.exceptions import UserException
 
 @dataclass
 class SageIntacctClientConfig:
-    app_key: str
-    app_secret: str
-    company_id: str
-    refresh_token: str
+    client_id: str
+    client_secret: str
+    username: str
     access_token: str | None = None
 
 
 class SageIntacctClient:
     def __init__(self, config: SageIntacctClientConfig):
-        self.app_key = config.app_key
-        self.app_secret = config.app_secret
-        self.company_id = config.company_id
-        self._refresh_token = config.refresh_token
+        self.client_id = config.client_id
+        self.client_secret = config.client_secret
+        self.username = config.username
         self._access_token = config.access_token
         self._session = requests.Session()
         self._base_url = "https://api.intacct.com/ia/api/v1"
@@ -30,14 +28,14 @@ class SageIntacctClient:
             self._authenticate()
 
     def _authenticate(self):
-        logging.info("Authenticating with Sage Intacct API")
+        logging.info("Authenticating with Sage Intacct API using client credentials")
         token_url = "https://api.intacct.com/ia/api/v1/oauth2/token"
 
         payload = {
-            "grant_type": "refresh_token",
-            "refresh_token": self._refresh_token,
-            "client_id": self.app_key,
-            "client_secret": self.app_secret,
+            "grant_type": "client_credentials",
+            "client_id": self.client_id,
+            "client_secret": self.client_secret,
+            "username": self.username,
         }
 
         try:
@@ -46,12 +44,12 @@ class SageIntacctClient:
 
             token_data = self._parse_json_response(response)
             self._access_token = token_data.get("access_token")
-            if "refresh_token" in token_data:
-                self._refresh_token = token_data["refresh_token"]
-                logging.info("Refresh token was rotated")
 
             logging.info("Successfully authenticated with Sage Intacct")
 
+        except requests.exceptions.HTTPError as e:
+            error_body = self._get_error_details(e, e.response)
+            raise UserException(f"Authentication failed: {error_body}")
         except requests.exceptions.RequestException as e:
             raise UserException(f"Authentication failed: {str(e)}")
 
@@ -336,7 +334,3 @@ class SageIntacctClient:
             yield batch
 
         logging.info(f"Extraction complete. Total records: {total_records}")
-
-    @property
-    def refresh_token(self) -> str:
-        return self._refresh_token
