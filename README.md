@@ -5,7 +5,19 @@ Extracts data from Sage Intacct objects into Keboola Storage via the REST API.
 
 **Table of Contents:**
 
-[TOC]
+<!-- TOC -->
+* [Sage Intacct Extractor](#sage-intacct-extractor)
+* [Functionality Notes](#functionality-notes)
+* [Prerequisites](#prerequisites)
+* [Features](#features)
+* [Supported Endpoints](#supported-endpoints)
+* [Configuration](#configuration)
+  * [Authorization](#authorization)
+  * [Row Configuration](#row-configuration)
+* [State Management](#state-management)
+* [Development](#development)
+* [Integration](#integration)
+<!-- TOC -->
 
 Functionality Notes
 ===================
