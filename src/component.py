@@ -161,7 +161,7 @@ class Component(ComponentBase):
     @sync_action("list_columns")
     def list_columns(self):
         # When called from within an endpoint array item, get the endpoint value from parameters
-        endpoint = self.configuration.parameters.get("source", {}).get("endpoint")
+        endpoint = self.cfg.source.endpoint
         if not endpoint:
             return []
 
