@@ -29,6 +29,20 @@
           "title": "Username",
           "description": "User to log in as, in format userId@companyId|entityId",
           "propertyOrder": 3
+        },
+        "entity": {
+          "type": "string",
+          "title": "Entity",
+          "format": "select",
+          "enum": [],
+          "options": {
+            "async": {
+              "label": "Load entities",
+              "action": "list_entities"
+            }
+          },
+          "description": "Specifies the entity for the request. If not provided, the default entity for the access token is used.",
+          "propertyOrder": 4
         }
       }
     }

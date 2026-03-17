@@ -13,6 +13,7 @@ class SageIntacctClientConfig:
     client_secret: str
     username: str
     access_token: str | None = None
+    entity: str = ""
 
 
 class SageIntacctClient:
@@ -21,6 +22,7 @@ class SageIntacctClient:
         self.client_secret = config.client_secret
         self.username = config.username
         self._access_token = config.access_token
+        self._entity = config.entity
         self._session = requests.Session()
         self._base_url = "https://api.intacct.com/ia/api/v1"
 
@@ -96,13 +98,15 @@ class SageIntacctClient:
                 return field
         return None
 
-    def _make_request(self, method: str, endpoint: str, **kwargs) -> requests.Response:
+    def _make_request(self, method: str, endpoint: str, allow_422: bool = False, **kwargs) -> requests.Response:
         if not self._access_token:
             self._authenticate()
 
         url = f"{self._base_url}{endpoint}"
         headers = kwargs.pop("headers", {})
         headers["Authorization"] = f"Bearer {self._access_token}"
+        if self._entity:
+            headers["X-IA-API-Param-Entity"] = self._entity
 
         max_retries = 3
 
@@ -151,6 +155,21 @@ class SageIntacctClient:
 
         query_payload = {
             "object": "company-config/location",
+            "start": 1,
+            "size": 1000,
+            "fields": ["id", "name"],
+        }
+
+        response = self._make_request("POST", "/services/core/query", json=query_payload)
+        data = self._parse_json_response(response)
+        results = data.get("ia::result", [])
+
+        logging.info(f"Found {len(results)} locations")
+        return results
+
+    def list_entities(self) -> list[dict]:
+        query_payload = {
+            "object": "company-config/entity",
             "start": 1,
             "size": 1000,
             "fields": ["id", "name"],

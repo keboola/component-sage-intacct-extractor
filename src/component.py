@@ -90,6 +90,7 @@ class Component(ComponentBase):
             schema=schema,
             primary_key=cfg.destination.primary_key,
             incremental=cfg.destination.incremental,
+            has_header=True,
         )
 
         with SageIntacctWriter(res_table.full_path) as writer:
@@ -146,6 +147,7 @@ class Component(ComponentBase):
             client_id=client_id,
             client_secret=client_secret,
             username=username,
+            entity=self.cfg.authorization.entity,
         )
         return SageIntacctClient(config)
 
@@ -154,13 +156,17 @@ class Component(ComponentBase):
         locations = self.client.list_locations()
         return [SelectElement(value=loc["id"], label=f"{loc['id']} - {loc.get('name', '')}") for loc in locations]
 
+    @sync_action("list_entities")
+    def list_entities(self) -> list[SelectElement]:
+        entities = self.client.list_entities()
+        return [SelectElement(value=e["id"], label=f"{e['id']} - {e.get('name', '')}") for e in entities]
+
     @sync_action("list_endpoints")
     def list_endpoints(self):
         return [SelectElement(value=obj) for obj in self.client.list_objects()]
 
     @sync_action("list_columns")
     def list_columns(self):
-        # When called from within an endpoint array item, get the endpoint value from parameters
         endpoint = self.cfg.source.endpoint
         if not endpoint:
             return []

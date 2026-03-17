@@ -10,6 +10,7 @@ class Authorization(BaseModel):
     client_id: str = Field(alias="#client_id", default="")
     client_secret: str = Field(alias="#client_secret", default="")
     username: str = ""
+    entity: str = ""
 
 
 class LoadType(str, Enum):

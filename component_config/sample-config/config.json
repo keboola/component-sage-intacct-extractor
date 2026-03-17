@@ -13,16 +13,22 @@
     "authorization": {
       "#client_id": "CLIENT_ID",
       "#client_secret": "CLIENT_SECRET",
-      "username": "userId@companyId"
+      "username": "userId@companyId",
+      "entity": "entityId"
     },
-    "endpoint": "accounts-receivable/customer",
-    "columns": [],
-    "primary_key": ["id"],
-    "incremental_field": "id",
-    "initial_since": "2024-01-01T00:00:00Z",
+    "source": {
+      "locations": [],
+      "endpoint": "accounts-receivable/customer",
+      "columns": [],
+      "incremental_field": "id",
+      "initial_since": "2024-01-01T00:00:00Z"
+    },
     "destination": {
       "load_type": "incremental_load",
-      "table_name": "customers"
+      "table_name": "customers",
+      "primary_key": [
+        "id"
+      ]
     },
     "batch_size": 1000,
     "debug": false
