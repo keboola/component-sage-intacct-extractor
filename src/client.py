@@ -175,11 +175,17 @@ class SageIntacctClient:
             "fields": ["id", "name"],
         }
 
-        response = self._make_request("POST", "/services/core/query", json=query_payload)
+        # temporarily clear the entity to list all
+        saved_entity = self._entity
+        self._entity = ""
+        try:
+            response = self._make_request("POST", "/services/core/query", json=query_payload)
+        finally:
+            self._entity = saved_entity
         data = self._parse_json_response(response)
         results = data.get("ia::result", [])
 
-        logging.info(f"Found {len(results)} locations")
+        logging.info(f"Found {len(results)} entities")
         return results
 
     def list_objects(self) -> list[str]:
