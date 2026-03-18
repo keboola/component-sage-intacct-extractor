@@ -1,0 +1,19 @@
+{
+  "files": {},
+  "hash_algorithm": "sha256",
+  "tables": {
+    "vendors": {
+      "columns": null,
+      "hash": "sha256:ba5abd918ce648e027d153807c1149700423f2253b242e907934ebc7e0f1a6cd",
+      "row_count": null,
+      "size_bytes": 8627
+    },
+    "vendors.manifest": {
+      "columns": null,
+      "hash": "sha256:f365e544d750a891517b452e09aa1fdf2092e463a92750f8c7407c5d5d8c15ac",
+      "row_count": null,
+      "size_bytes": 4923
+    }
+  },
+  "version": "1.0"
+}

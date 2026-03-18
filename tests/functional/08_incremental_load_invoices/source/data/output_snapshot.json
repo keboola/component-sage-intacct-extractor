@@ -1,0 +1,19 @@
+{
+  "files": {},
+  "hash_algorithm": "sha256",
+  "tables": {
+    "invoices": {
+      "columns": null,
+      "hash": "sha256:aa6f1fc662d3c9e32d4a1b5ed0fe77af4b99e0dea14bb69e5c64884f0cb751cb",
+      "row_count": null,
+      "size_bytes": 113428
+    },
+    "invoices.manifest": {
+      "columns": null,
+      "hash": "sha256:2d9907b58a8d845530fd58d87e066e6a596aef7784ea291e41f5c99d2ed0ec3f",
+      "row_count": null,
+      "size_bytes": 4098
+    }
+  },
+  "version": "1.0"
+}

@@ -1,0 +1,245 @@
+{
+  "incremental": false,
+  "write_always": false,
+  "delimiter": ",",
+  "enclosure": "\"",
+  "manifest_type": "out",
+  "has_header": true,
+  "schema": [
+    {
+      "name": "action",
+      "data_type": {
+        "base": {
+          "type": "STRING"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "createAPBill",
+      "data_type": {
+        "base": {
+          "type": "BOOLEAN"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "description",
+      "data_type": {
+        "base": {
+          "type": "STRING"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "discountCutOffDate",
+      "data_type": {
+        "base": {
+          "type": "STRING"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "documentId",
+      "data_type": {
+        "base": {
+          "type": "STRING"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "downloadURL",
+      "data_type": {
+        "base": {
+          "type": "STRING"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "dueDate",
+      "data_type": {
+        "base": {
+          "type": "STRING"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "dueInDays",
+      "data_type": {
+        "base": {
+          "type": "INTEGER"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "dunningCount",
+      "data_type": {
+        "base": {
+          "type": "INTEGER"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "eInvoiceStatus",
+      "data_type": {
+        "base": {
+          "type": "STRING"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "id",
+      "data_type": {
+        "base": {
+          "type": "STRING"
+        }
+      },
+      "nullable": true,
+      "primary_key": true
+    },
+    {
+      "name": "invoiceDate",
+      "data_type": {
+        "base": {
+          "type": "STRING"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "invoiceMode",
+      "data_type": {
+        "base": {
+          "type": "STRING"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "invoiceNumber",
+      "data_type": {
+        "base": {
+          "type": "STRING"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "invoiceType",
+      "data_type": {
+        "base": {
+          "type": "STRING"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "isSystemGeneratedDocument",
+      "data_type": {
+        "base": {
+          "type": "BOOLEAN"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "key",
+      "data_type": {
+        "base": {
+          "type": "STRING"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "moduleKey",
+      "data_type": {
+        "base": {
+          "type": "STRING"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "recordType",
+      "data_type": {
+        "base": {
+          "type": "STRING"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "referenceNumber",
+      "data_type": {
+        "base": {
+          "type": "STRING"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "state",
+      "data_type": {
+        "base": {
+          "type": "STRING"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "totalBaseAmount",
+      "data_type": {
+        "base": {
+          "type": "STRING"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "totalBaseAmountDue",
+      "data_type": {
+        "base": {
+          "type": "STRING"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "totalTxnAmount",
+      "data_type": {
+        "base": {
+          "type": "STRING"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "totalTxnAmountDue",
+      "data_type": {
+        "base": {
+          "type": "STRING"
+        }
+      },
+      "nullable": true
+    },
+    {
+      "name": "webURL",
+      "data_type": {
+        "base": {
+          "type": "STRING"
+        }
+      },
+      "nullable": true
+    }
+  ]
+}
