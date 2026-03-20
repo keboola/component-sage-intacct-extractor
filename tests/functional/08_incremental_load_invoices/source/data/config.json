@@ -10,8 +10,8 @@
       "endpoint": "accounts-receivable/invoice",
       "columns": [],
       "locations": [],
-      "incremental_field": "whencreated",
-      "initial_since": "2024-01-01T00:00:00Z"
+      "incremental_field": "invoiceDate",
+      "initial_since": "2020-01-01"
     },
     "destination": {
       "load_type": "incremental_load",

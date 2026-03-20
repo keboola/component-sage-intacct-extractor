@@ -4,9 +4,9 @@
   "tables": {
     "invoices": {
       "columns": null,
-      "hash": "sha256:aa6f1fc662d3c9e32d4a1b5ed0fe77af4b99e0dea14bb69e5c64884f0cb751cb",
+      "hash": "sha256:ea27feb7b9dc76a8d4b1c919fb0de62e2c32f3753c550b9d68586b8d8e370029",
       "row_count": null,
-      "size_bytes": 113428
+      "size_bytes": 3429
     },
     "invoices.manifest": {
       "columns": null,

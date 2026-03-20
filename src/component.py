@@ -70,6 +70,11 @@ class Component(ComponentBase):
 
         if cfg.destination.incremental:
             incremental_field = cfg.source.incremental_field
+            if incremental_field and incremental_field not in all_fields_metadata:
+                raise UserException(
+                    f"Incremental field '{incremental_field}' is not supported for object '{cfg.source.endpoint}'. "
+                    f"Supported fields: {', '.join(sorted(all_fields_metadata.keys()))}"
+                )
             endpoint_state = new_endpoint_states.get(cfg.source.endpoint, {})
             incremental_value = endpoint_state.get("last_incremental_value") or cfg.source.initial_since
 

@@ -129,10 +129,10 @@ class SageIntacctClient:
                     continue
 
                 # Return structured API errors to the caller for inspection (e.g. invalid field errors)
-                if response.status_code in (400, 422):
+                if allow_422 and response.status_code in (400, 422):
                     return response
 
-                # Raise for other HTTP errors (4xx, 5xx)
+                # Raise for all other HTTP errors (4xx, 5xx)
                 response.raise_for_status()
                 return response
 
@@ -293,7 +293,7 @@ class SageIntacctClient:
         batch = []
 
         while True:
-            response = self._make_request("POST", "/services/core/query", json=query_payload)
+            response = self._make_request("POST", "/services/core/query", allow_422=True, json=query_payload)
             data = self._parse_json_response(response)
 
             # Check if response contains an error
