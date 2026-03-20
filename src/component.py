@@ -145,7 +145,7 @@ class Component(ComponentBase):
         if not username:
             raise UserException(
                 "Username is required. "
-                "Please configure 'username' under the 'authorization' block (format: userId@companyId|entityId)."
+                "Please configure 'username' under the 'authorization' block (format: userId@companyId)."
             )
 
         config = SageIntacctClientConfig(

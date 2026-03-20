@@ -1,18 +1,26 @@
 {
   "type": "object",
   "title": "Sage Intacct Extractor Configuration",
-  "required": [],
+  "required": [
+    "authorization"
+  ],
   "properties": {
     "authorization": {
       "type": "object",
       "title": "Authorization",
       "propertyOrder": 1,
+      "required": [
+        "#client_id",
+        "#client_secret",
+        "username"
+      ],
       "properties": {
         "#client_id": {
           "type": "string",
           "format": "password",
           "title": "Client ID",
           "description": "Your Sage Intacct application Client ID",
+          "minLength": 1,
           "propertyOrder": 1
         },
         "#client_secret": {
@@ -20,12 +28,14 @@
           "format": "password",
           "title": "Client Secret",
           "description": "Your Sage Intacct application Client Secret",
+          "minLength": 1,
           "propertyOrder": 2
         },
         "username": {
           "type": "string",
           "title": "Username",
-          "description": "User to log in as, in format userId@companyId|entityId",
+          "description": "User to log in as, in format userId@companyId",
+          "minLength": 1,
           "propertyOrder": 3
         },
         "entity": {
