@@ -9,7 +9,6 @@ class SageIntacctWriter:
         self._columns = None
 
     def __enter__(self):
-        self._file = open(self.file_path, "w", newline="", encoding="utf-8")
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -24,6 +23,7 @@ class SageIntacctWriter:
 
         if not self._writer:
             self._columns = list(rows[0].keys())
+            self._file = open(self.file_path, "w", encoding="utf-8")
             self._writer = csv.DictWriter(self._file, fieldnames=self._columns)
             self._writer.writeheader()
 

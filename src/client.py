@@ -9,20 +9,20 @@ from keboola.component.exceptions import UserException
 
 @dataclass
 class SageIntacctClientConfig:
-    app_key: str
-    app_secret: str
-    company_id: str
-    refresh_token: str
+    client_id: str
+    client_secret: str
+    username: str
     access_token: str | None = None
+    entity: str = ""
 
 
 class SageIntacctClient:
     def __init__(self, config: SageIntacctClientConfig):
-        self.app_key = config.app_key
-        self.app_secret = config.app_secret
-        self.company_id = config.company_id
-        self._refresh_token = config.refresh_token
+        self.client_id = config.client_id
+        self.client_secret = config.client_secret
+        self.username = config.username
         self._access_token = config.access_token
+        self._entity = config.entity
         self._session = requests.Session()
         self._base_url = "https://api.intacct.com/ia/api/v1"
 
@@ -30,14 +30,14 @@ class SageIntacctClient:
             self._authenticate()
 
     def _authenticate(self):
-        logging.info("Authenticating with Sage Intacct API")
+        logging.info("Authenticating with Sage Intacct API using client credentials")
         token_url = "https://api.intacct.com/ia/api/v1/oauth2/token"
 
         payload = {
-            "grant_type": "refresh_token",
-            "refresh_token": self._refresh_token,
-            "client_id": self.app_key,
-            "client_secret": self.app_secret,
+            "grant_type": "client_credentials",
+            "client_id": self.client_id,
+            "client_secret": self.client_secret,
+            "username": self.username,
         }
 
         try:
@@ -46,12 +46,12 @@ class SageIntacctClient:
 
             token_data = self._parse_json_response(response)
             self._access_token = token_data.get("access_token")
-            if "refresh_token" in token_data:
-                self._refresh_token = token_data["refresh_token"]
-                logging.info("Refresh token was rotated")
 
             logging.info("Successfully authenticated with Sage Intacct")
 
+        except requests.exceptions.HTTPError as e:
+            error_body = self._get_error_details(e, e.response)
+            raise UserException(f"Authentication failed: {error_body}")
         except requests.exceptions.RequestException as e:
             raise UserException(f"Authentication failed: {str(e)}")
 
@@ -79,13 +79,34 @@ class SageIntacctClient:
                 f"Response preview: {response.text[:200]}"
             ) from e
 
-    def _make_request(self, method: str, endpoint: str, **kwargs) -> requests.Response:
+    @staticmethod
+    def _extract_invalid_field(error_info: dict) -> str | None:
+        """Extract the offending field name from a field-not-found API error.
+
+        Handles two error shapes:
+        - Top-level: additionalInfo.placeholders.FIELD (e.g. 'location.id')
+        - Nested: details[].additionalInfo.placeholders.FIELD_PATH (e.g. 'LOCATION')
+        """
+        placeholders = error_info.get("additionalInfo", {}).get("placeholders", {})
+        field = placeholders.get("FIELD") or placeholders.get("FIELD_PATH")
+        if field:
+            return field
+        for detail in error_info.get("details", []):
+            detail_placeholders = detail.get("additionalInfo", {}).get("placeholders", {})
+            field = detail_placeholders.get("FIELD") or detail_placeholders.get("FIELD_PATH")
+            if field:
+                return field
+        return None
+
+    def _make_request(self, method: str, endpoint: str, allow_422: bool = False, **kwargs) -> requests.Response:
         if not self._access_token:
             self._authenticate()
 
         url = f"{self._base_url}{endpoint}"
         headers = kwargs.pop("headers", {})
         headers["Authorization"] = f"Bearer {self._access_token}"
+        if self._entity:
+            headers["X-IA-API-Param-Entity"] = self._entity
 
         max_retries = 3
 
@@ -107,7 +128,11 @@ class SageIntacctClient:
                     time.sleep(retry_after)
                     continue
 
-                # Raise for other HTTP errors (4xx, 5xx)
+                # Return structured API errors to the caller for inspection (e.g. invalid field errors)
+                if allow_422 and response.status_code in (400, 422):
+                    return response
+
+                # Raise for all other HTTP errors (4xx, 5xx)
                 response.raise_for_status()
                 return response
 
@@ -123,6 +148,45 @@ class SageIntacctClient:
 
         # Should never reach here
         raise UserException("API request failed: max retries exceeded")
+
+    def list_locations(self) -> list[dict]:
+        """Get available locations. Returns list of dicts with id and name."""
+        logging.info("Fetching list of Sage Intacct locations")
+
+        query_payload = {
+            "object": "company-config/location",
+            "start": 1,
+            "size": 1000,
+            "fields": ["id", "name"],
+        }
+
+        response = self._make_request("POST", "/services/core/query", json=query_payload)
+        data = self._parse_json_response(response)
+        results = data.get("ia::result", [])
+
+        logging.info(f"Found {len(results)} locations")
+        return results
+
+    def list_entities(self) -> list[dict]:
+        query_payload = {
+            "object": "company-config/entity",
+            "start": 1,
+            "size": 1000,
+            "fields": ["id", "name"],
+        }
+
+        # temporarily clear the entity to list all
+        saved_entity = self._entity
+        self._entity = ""
+        try:
+            response = self._make_request("POST", "/services/core/query", json=query_payload)
+        finally:
+            self._entity = saved_entity
+        data = self._parse_json_response(response)
+        results = data.get("ia::result", [])
+
+        logging.info(f"Found {len(results)} entities")
+        return results
 
     def list_objects(self) -> list[str]:
         logging.info("Fetching list of Sage Intacct objects from model API")
@@ -194,6 +258,7 @@ class SageIntacctClient:
         incremental_field: str | None = None,
         incremental_value: str | None = None,
         batch_size: int = 1000,
+        locations: list[str] | None = None,
     ) -> Generator[list[dict], None, None]:
         logging.info(f"Starting data extraction for object: {object_path}")
 
@@ -209,20 +274,26 @@ class SageIntacctClient:
             "start": 1,
             "size": batch_size,
             "fields": fields,
+            "filterParameters": {"includePrivate": True},
         }
 
+        filters = []
         if incremental_field and incremental_value:
             logging.info(f"Using incremental filtering: {incremental_field} >= {incremental_value}")
-            query_payload["filters"] = [{"$gte": {incremental_field: incremental_value}}]
+            filters.append({"$gte": {incremental_field: incremental_value}})
+
+        if locations:
+            logging.info(f"Filtering by locations: {locations}")
+            filters.append({"$in": {"location.id": locations}})
+
+        if filters:
+            query_payload["filters"] = filters
 
         total_records = 0
         batch = []
 
-        # Try the first query and handle field errors
-        first_attempt = True
-
         while True:
-            response = self._make_request("POST", "/services/core/query", json=query_payload)
+            response = self._make_request("POST", "/services/core/query", allow_422=True, json=query_payload)
             data = self._parse_json_response(response)
 
             # Check if response contains an error
@@ -231,22 +302,32 @@ class SageIntacctClient:
                 error_info = result["ia::error"]
                 error_msg = error_info.get("message", "")
 
-                # If first query fails due to invalid field, try to extract which field and retry
-                if first_attempt and "field does not exist" in error_msg.lower():
-                    # Try to extract field name from error placeholders or message
-                    placeholders = error_info.get("additionalInfo", {}).get("placeholders", {})
-                    problem_field = placeholders.get("FIELD")
-
-                    if problem_field and problem_field in query_payload.get("fields", []):
-                        logging.warning(f"Field '{problem_field}' does not exist, removing and retrying")
+                problem_field = self._extract_invalid_field(error_info)
+                if problem_field:
+                    if problem_field in (query_payload.get("fields") or []):
+                        logging.warning(f"Field '{problem_field}' does not exist in '{object_path}', skipping")
                         query_payload["fields"] = [f for f in query_payload["fields"] if f != problem_field]
-                        first_attempt = False
                         continue
 
-                # If we can't handle the error, raise it
-                raise UserException(f"API Error: {error_msg}")
+                    existing_filters = query_payload.get("filters", [])
+                    trimmed_filters = [f for f in existing_filters if problem_field not in next(iter(f.values()), {})]
+                    if len(trimmed_filters) < len(existing_filters):
+                        logging.warning(f"Filter field '{problem_field}' not supported by '{object_path}', skipping")
+                        if trimmed_filters:
+                            query_payload["filters"] = trimmed_filters
+                        else:
+                            query_payload.pop("filters", None)
+                        continue
 
-            first_attempt = False
+                    # Field is location-related (e.g. FIELD_PATH='LOCATION') and we have a location filter
+                    if locations and "location" in problem_field.lower():
+                        logging.warning(
+                            f"Location filtering not supported by '{object_path}' (field: '{problem_field}'), skipping"
+                        )
+                        query_payload.pop("filters", None)
+                        continue
+
+                raise UserException(f"API Error: {error_msg}")
 
             results = data.get("ia::result", [])
             if not results:
@@ -278,7 +359,3 @@ class SageIntacctClient:
             yield batch
 
         logging.info(f"Extraction complete. Total records: {total_records}")
-
-    @property
-    def refresh_token(self) -> str:
-        return self._refresh_token

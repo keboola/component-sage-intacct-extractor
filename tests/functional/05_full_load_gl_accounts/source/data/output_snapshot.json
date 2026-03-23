@@ -1,0 +1,19 @@
+{
+  "files": {},
+  "hash_algorithm": "sha256",
+  "tables": {
+    "gl_accounts": {
+      "columns": null,
+      "hash": "sha256:215666447013b2462e44d58408bc6f01cf43efdad8eca1df1a062de03ebf3f67",
+      "row_count": null,
+      "size_bytes": 19407
+    },
+    "gl_accounts.manifest": {
+      "columns": null,
+      "hash": "sha256:8fd98651d54dfd4061cda6fc89e8dae3188999b0feef411bb230442d48c214e2",
+      "row_count": null,
+      "size_bytes": 2260
+    }
+  },
+  "version": "1.0"
+}

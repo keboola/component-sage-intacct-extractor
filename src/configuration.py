@@ -1,7 +1,16 @@
 from enum import Enum
 
 from keboola.component.exceptions import UserException
-from pydantic import BaseModel, Field, ValidationError, computed_field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, computed_field
+
+
+class Authorization(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    client_id: str = Field(alias="#client_id", default="")
+    client_secret: str = Field(alias="#client_secret", default="")
+    username: str = ""
+    entity: str = ""
 
 
 class LoadType(str, Enum):
@@ -9,17 +18,10 @@ class LoadType(str, Enum):
     incremental_load = "incremental_load"
 
 
-class Endpoint(BaseModel):
-    endpoint: str
-    columns: list[str] = Field(default_factory=list)
-    table_name: str = ""
-    primary_key: list[str] = ["id"]
-    incremental_field: str = "id"
-    initial_since: str = ""
-
-
 class Destination(BaseModel):
     load_type: LoadType = Field(default=LoadType.incremental_load)
+    table_name: str = ""
+    primary_key: list[str] = ["id"]
 
     @computed_field
     @property
@@ -27,9 +29,19 @@ class Destination(BaseModel):
         return self.load_type == LoadType.incremental_load
 
 
+class Source(BaseModel):
+    locations: list[str] = Field(default_factory=list)
+    endpoint: str = ""
+    columns: list[str] = Field(default_factory=list)
+    incremental_field: str = "id"
+    initial_since: str = ""
+
+
 class Configuration(BaseModel):
-    endpoints: list[Endpoint] = Field(default_factory=list)
+    authorization: Authorization = Field(default_factory=Authorization)
+    source: Source = Field(default_factory=Source)
     destination: Destination = Field(default_factory=Destination)
+
     batch_size: int = 1000
     debug: bool = False
 

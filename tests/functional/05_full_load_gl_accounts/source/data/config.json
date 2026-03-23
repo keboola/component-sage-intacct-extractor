@@ -1,0 +1,25 @@
+{
+  "action": "run",
+  "parameters": {
+    "authorization": {
+      "#client_id": "DUMMY_CLIENT_ID",
+      "#client_secret": "DUMMY_CLIENT_SECRET",
+      "username": "DUMMY_USER@DUMMY_COMPANY"
+    },
+    "source": {
+      "endpoint": "general-ledger/account",
+      "columns": [],
+      "locations": [],
+      "incremental_field": "id",
+      "initial_since": ""
+    },
+    "destination": {
+      "load_type": "full_load",
+      "table_name": "gl_accounts",
+      "primary_key": [
+        "id"
+      ]
+    },
+    "batch_size": 100
+  }
+}

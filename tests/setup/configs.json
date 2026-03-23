@@ -1,0 +1,191 @@
+[
+  {
+    "name": "01_full_load_customers",
+    "description": "Full load extraction of accounts-receivable/customer",
+    "config": {
+      "action": "run",
+      "parameters": {
+        "authorization": {
+          "#client_id": "DUMMY_CLIENT_ID",
+          "#client_secret": "DUMMY_CLIENT_SECRET",
+          "username": "DUMMY_USER@DUMMY_COMPANY"
+        },
+        "source": {
+          "endpoint": "accounts-receivable/customer",
+          "columns": [],
+          "locations": [],
+          "incremental_field": "id",
+          "initial_since": ""
+        },
+        "destination": {
+          "load_type": "full_load",
+          "table_name": "customers",
+          "primary_key": ["id"]
+        },
+        "batch_size": 100
+      }
+    }
+  },
+  {
+    "name": "02_incremental_load_customers",
+    "description": "Incremental load of accounts-receivable/customer filtered by activationDate",
+    "config": {
+      "action": "run",
+      "parameters": {
+        "authorization": {
+          "#client_id": "DUMMY_CLIENT_ID",
+          "#client_secret": "DUMMY_CLIENT_SECRET",
+          "username": "DUMMY_USER@DUMMY_COMPANY"
+        },
+        "source": {
+          "endpoint": "accounts-receivable/customer",
+          "columns": [],
+          "locations": [],
+          "incremental_field": "activationDate",
+          "initial_since": "2020-01-01"
+        },
+        "destination": {
+          "load_type": "incremental_load",
+          "table_name": "customers",
+          "primary_key": ["id"]
+        },
+        "batch_size": 100
+      }
+    }
+  },
+  {
+    "name": "03_full_load_vendors",
+    "description": "Full load extraction of accounts-payable/vendor",
+    "config": {
+      "action": "run",
+      "parameters": {
+        "authorization": {
+          "#client_id": "DUMMY_CLIENT_ID",
+          "#client_secret": "DUMMY_CLIENT_SECRET",
+          "username": "DUMMY_USER@DUMMY_COMPANY"
+        },
+        "source": {
+          "endpoint": "accounts-payable/vendor",
+          "columns": [],
+          "locations": [],
+          "incremental_field": "id",
+          "initial_since": ""
+        },
+        "destination": {
+          "load_type": "full_load",
+          "table_name": "vendors",
+          "primary_key": ["id"]
+        },
+        "batch_size": 100
+      }
+    }
+  },
+  {
+    "name": "04_incremental_load_vendors",
+    "description": "Incremental load of accounts-payable/vendor filtered by lastBillCreatedDate",
+    "config": {
+      "action": "run",
+      "parameters": {
+        "authorization": {
+          "#client_id": "DUMMY_CLIENT_ID",
+          "#client_secret": "DUMMY_CLIENT_SECRET",
+          "username": "DUMMY_USER@DUMMY_COMPANY"
+        },
+        "source": {
+          "endpoint": "accounts-payable/vendor",
+          "columns": [],
+          "locations": [],
+          "incremental_field": "lastBillCreatedDate",
+          "initial_since": "2020-01-01"
+        },
+        "destination": {
+          "load_type": "incremental_load",
+          "table_name": "vendors",
+          "primary_key": ["id"]
+        },
+        "batch_size": 100
+      }
+    }
+  },
+  {
+    "name": "05_full_load_gl_accounts",
+    "description": "Full load extraction of general-ledger/account",
+    "config": {
+      "action": "run",
+      "parameters": {
+        "authorization": {
+          "#client_id": "DUMMY_CLIENT_ID",
+          "#client_secret": "DUMMY_CLIENT_SECRET",
+          "username": "DUMMY_USER@DUMMY_COMPANY"
+        },
+        "source": {
+          "endpoint": "general-ledger/account",
+          "columns": [],
+          "locations": [],
+          "incremental_field": "id",
+          "initial_since": ""
+        },
+        "destination": {
+          "load_type": "full_load",
+          "table_name": "gl_accounts",
+          "primary_key": ["id"]
+        },
+        "batch_size": 100
+      }
+    }
+  },
+  {
+    "name": "07_full_load_invoices",
+    "description": "Full load extraction of accounts-receivable/invoice",
+    "config": {
+      "action": "run",
+      "parameters": {
+        "authorization": {
+          "#client_id": "DUMMY_CLIENT_ID",
+          "#client_secret": "DUMMY_CLIENT_SECRET",
+          "username": "DUMMY_USER@DUMMY_COMPANY"
+        },
+        "source": {
+          "endpoint": "accounts-receivable/invoice",
+          "columns": [],
+          "locations": [],
+          "incremental_field": "id",
+          "initial_since": ""
+        },
+        "destination": {
+          "load_type": "full_load",
+          "table_name": "invoices",
+          "primary_key": ["id"]
+        },
+        "batch_size": 100
+      }
+    }
+  },
+  {
+    "name": "08_incremental_load_invoices",
+    "description": "Incremental load of accounts-receivable/invoice filtered by invoiceDate",
+    "config": {
+      "action": "run",
+      "parameters": {
+        "authorization": {
+          "#client_id": "DUMMY_CLIENT_ID",
+          "#client_secret": "DUMMY_CLIENT_SECRET",
+          "username": "DUMMY_USER@DUMMY_COMPANY"
+        },
+        "source": {
+          "endpoint": "accounts-receivable/invoice",
+          "columns": [],
+          "locations": [],
+          "incremental_field": "invoiceDate",
+          "initial_since": "2020-01-01"
+        },
+        "destination": {
+          "load_type": "incremental_load",
+          "table_name": "invoices",
+          "primary_key": ["id"]
+        },
+        "batch_size": 100
+      }
+    }
+  }
+]
